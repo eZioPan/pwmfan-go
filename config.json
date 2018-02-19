@@ -1,0 +1,14 @@
+{
+	"Pin":18,
+	"CPUTempPath":"/sys/class/thermal/thermal_zone0/temp",
+	"StartCount":5,
+	"StopCount":5,
+	"StartTemp":33,
+	"LowTemp":30,
+	"HighTemp":40,
+    "PwmFreq":600,
+    "StartCycle":50,
+	"LowCycle":80,
+	"HighCycle":100,
+	"FullCycle":100
+}
