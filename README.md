@@ -42,7 +42,7 @@ Here is an example of config.json file
 **CPUTempPath** defines the system file path to read cpu's temperature.  
 **~~StartCount~~** , **~~StopCount~~** not use in this version  
 **StartTemp** when temperature higher than this value, fan will start  
-**LowTemp** when temperature lower than this value, fan will stop
+**LowTemp** when temperature lower than this value, fan will stop  
 **HighTemp** when temperature higher than this value, fan will run in **HighCycle** defined speed  
 **PwmFreq** PWM signal frequence, should be set high enough for PWM signal  
 **StartCycle** when fan start from full stop, it needs a little higher speed to kick it start  
