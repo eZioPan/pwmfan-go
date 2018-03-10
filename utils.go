@@ -65,13 +65,13 @@ func SignalProcess(Process *os.Process, SigChan <-chan os.Signal, Action func())
 }
 
 // LinearRemap is a linear remap function
-func LinearRemap(input float64, opt ...float64) (y float64) {
-	y = (opt[3]-opt[2])/(opt[1]-opt[0])*input + (opt[2] - opt[0]*(opt[3]-opt[2])/(opt[1]-opt[0]))
-	return y
+func LinearRemap(input float64, opt ...float64) (output float64) {
+	output = (opt[3]-opt[2])/(opt[1]-opt[0])*input + (opt[2] - opt[0]*(opt[3]-opt[2])/(opt[1]-opt[0]))
+	return output
 }
 
-// LinearClampRemap is a linear remap function that will clamp ouput in between opt[2] and opt[3]
-func LinearClampRemap(input float64, opt ...float64) (y float64) {
+// LinearClampRemap is a linear remap function that will clamp output in between opt[2] and opt[3]
+func LinearClampRemap(input float64, opt ...float64) (output float64) {
 	if input <= opt[0] {
 		return opt[2]
 	} else if input <= opt[1] {
