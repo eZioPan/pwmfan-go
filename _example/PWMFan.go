@@ -20,7 +20,7 @@ func init() {
 }
 
 func main() {
-
+	flag.Parse()
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGHUP)
 	err := rpio.Open()
