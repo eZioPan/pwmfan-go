@@ -84,6 +84,7 @@ import "github.com/eZioPan/pwmfan-go"
 [stianeikeland/go-rpio](https://github.com/stianeikeland/go-rpio) for accessing RasberryPi gpio in pure go  
   
 ## **TODO**
+- run as a Systemd service  
 - Write fan log to system log  
 - Network function to read fan state  
 - Network function to change fan parameter  
