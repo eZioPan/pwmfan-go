@@ -10,5 +10,6 @@
 	"StartCycle":50,
 	"LowCycle":80,
 	"HighCycle":100,
-	"FullCycle":100
+	"FullCycle":100,
+	"SampleRate":2
 }
