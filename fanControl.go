@@ -20,7 +20,7 @@ func NewFan(cfg Config) (fan *Fan) {
 	return fan
 }
 
-// Monitor is in todo list
+// Monitor is the function to control fan's real-time stat
 func (fan *Fan) Monitor() {
 	for {
 		fan.SetTemp(ReadCPUTemperature(fan.GetCfg().CPUTempPath, 1000))
@@ -51,7 +51,10 @@ func (fan *Fan) Monitor() {
 		fan.UpdateCycleFromState(LinearClampRemap)
 		fan.Pin.DutyCycle(uint32(fan.GetCycle()), uint32(fan.GetCfg().FullCycle))
 		time.Sleep(time.Second / time.Duration(fan.GetCfg().SampleRate))
-		fmt.Printf("Pin:%v,Temp:%v,Cycle:%v,State:%v,Start:%v,Stop:%v\n", fan.Pin, fan.Temp, fan.Cycle, fan.State, fan.StartCounter, fan.StopCounter)
+
+		// Don't pour rubbish into system log
+		// TODO: try use level classified log
+		//fmt.Printf("Pin:%v,Temp:%v,Cycle:%v,State:%v,Start:%v,Stop:%v\n", fan.Pin, fan.Temp, fan.Cycle, fan.State, fan.StartCounter, fan.StopCounter)
 	}
 }
 
