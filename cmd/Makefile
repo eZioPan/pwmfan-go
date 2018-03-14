@@ -4,7 +4,7 @@ PREFIX=/usr/local
 CONFIG=/etc/pwmfan
 
 main:
-	go build -ldflag "-s -w" -o pwmfan
+	go build -v -o pwmfan -ldflags "-s -w"
 
 install:
 	mkdir -p /etc/pwmfan/
@@ -19,11 +19,11 @@ install:
 	systemctl enable pwmfan
 
 clean:
-	rm -rf pwmfan
+	rm pwmfan
 
 uninstall:
 	systemctl stop pwmfan
 	systemctl disable pwmfan
-	rm -rf /etc/systemd/system/pwmfan.service
-	rm -rf /usr/local/bin/pwmfan
-	rm -rf /etc/pwmfan
+	rm /etc/systemd/system/pwmfan.service
+	rm /usr/local/bin/pwmfan
+	rm -r /etc/pwmfan
