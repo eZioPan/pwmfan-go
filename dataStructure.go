@@ -1,28 +1,35 @@
 package pwmfan
 
 import (
+	"net"
+
 	"github.com/stianeikeland/go-rpio"
 )
 
 //Config contain all information that define a PWM fan's user configuration
+// TODO: try to implement String() method
 type Config struct {
-	Pin         uint
-	CPUTempPath string
-	StartCount  uint
-	StopCount   uint
-	StartTemp   float64
-	LowTemp     float64
-	HighTemp    float64
-	PwmFreq     uint
-	StopCycle   uint
-	StartCycle  uint
-	LowCycle    uint
-	HighCycle   uint
-	FullCycle   uint
-	SampleRate  uint
+	Pin                  uint
+	CPUTempPath          string
+	StartCount           uint
+	StopCount            uint
+	StartTemp            float64
+	LowTemp              float64
+	HighTemp             float64
+	PwmFreq              uint
+	StopCycle            uint
+	StartCycle           uint
+	LowCycle             uint
+	HighCycle            uint
+	FullCycle            uint
+	SampleRate           uint
+	NetworkInterfaceName string
+	ListenPort           int
+	Token                string
 }
 
 // FanState represent a PWM Fan's running state
+// TODO: try to implement String() method
 type FanState uint
 
 const (
@@ -39,6 +46,7 @@ const (
 State, Cycle, Temp should be updated 'in realtime'
 Pin better not be modified after call NewFan()
 */
+// TODO: try to implement String() method
 type Fan struct {
 	State        FanState
 	Cycle        uint
@@ -47,6 +55,7 @@ type Fan struct {
 	Pin          rpio.Pin
 	StopCounter  uint
 	StartCounter uint
+	UDPAddr      *net.UDPAddr
 }
 
 // RemapFunc is a function that read at least one float64 input and output a float64 data
