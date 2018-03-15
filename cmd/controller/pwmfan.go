@@ -24,9 +24,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGHUP)
 	err := rpio.Open()
-	if err != nil {
-		panic(err)
-	}
+	pwmfan.HandleErr(err)
 	defer rpio.Close()
 	fan0 := pwmfan.NewFan(pwmfan.ParseJSON(configPath))
 	action := func() {
@@ -37,9 +35,7 @@ func main() {
 		fmt.Println("Terminating")
 	}
 	p, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		panic(err)
-	}
+	pwmfan.HandleErr(err)
 	go pwmfan.SignalProcess(p, sigChan, action)
 
 	fan0.Monitor()
