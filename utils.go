@@ -8,19 +8,22 @@ import (
 	"strconv"
 )
 
-// ParseJSON parse json file into a PwmFanCfg structure
-func ParseJSON(cfgFilePath string) (cfg Config) {
-	cfgFile, err := os.OpenFile(cfgFilePath, os.O_RDONLY, 0644)
+// HandleErr will try to handle an error
+func HandleErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// ParseJSON parse json file into a Config structure
+func ParseJSON(cfgFilePath string) (cfg Config) {
+	cfgFile, err := os.OpenFile(cfgFilePath, os.O_RDONLY, 0644)
+	HandleErr(err)
 	defer cfgFile.Close()
 	jsd := json.NewDecoder(cfgFile)
 	cfg = Config{}
 	err = jsd.Decode(&cfg)
-	if err != nil {
-		panic(err)
-	}
+	HandleErr(err)
 	return cfg
 }
 
@@ -32,13 +35,9 @@ Divider should be set to 1000
 */
 func ReadCPUTemperature(CPUTempPath string, Divider float64) (Temperature float64) {
 	tempBuf, err := ioutil.ReadFile(CPUTempPath)
-	if err != nil {
-		panic(err)
-	}
+	HandleErr(err)
 	raw, err := strconv.ParseFloat(string(tempBuf[:len(tempBuf)-1]), 64)
-	if err != nil {
-		panic(err)
-	}
+	HandleErr(err)
 	Temperature = raw / Divider
 	return Temperature
 }
