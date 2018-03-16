@@ -54,7 +54,7 @@ func (fan *Fan) Monitor() {
 
 		// Don't pour rubbish into system log
 		// TODO: try use level classified log
-		//fmt.Printf("Pin:%v,Temp:%v,Cycle:%v,State:%v,Start:%v,Stop:%v\n", fan.Pin, fan.Temp, fan.Cycle, fan.State, fan.StartCounter, fan.StopCounter)
+
 	}
 }
 
