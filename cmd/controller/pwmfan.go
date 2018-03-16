@@ -38,6 +38,9 @@ func main() {
 	pwmfan.HandleErr(err)
 	go pwmfan.SignalProcess(p, sigChan, action)
 
+	srvConn := fan0.CreateServer()
+	go fan0.HandleRequest(srvConn)
+
 	fan0.Monitor()
 
 }
