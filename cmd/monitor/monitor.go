@@ -2,14 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
-	"fmt"
 	"net"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/eZioPan/pwmfan-go"
 )
 
 // Config represent a client config
@@ -28,38 +26,62 @@ var (
 func init() {
 	flag.StringVar(&configPath, "config", "config.json", "system temperature file")
 }
+
 func main() {
 	flag.Parse()
 	cfg := ParseJSON(configPath)
-	lIP := pwmfan.IFNameToIP(cfg.GetNetworkInterfaceName())
+	lIP := IFNameToIPv4(cfg.GetNetworkInterfaceName())
 	lUDPAddr, err := net.ResolveUDPAddr("udp", lIP.String()+":0")
-	pwmfan.HandleErr(err)
+	HandleErr(err)
 	rAddr := cfg.GetRemoteHost() + ":" + strconv.Itoa(int(cfg.GetRemotePort()))
 	rUDPAddr, err := net.ResolveUDPAddr("udp", rAddr)
-	pwmfan.HandleErr(err)
+	HandleErr(err)
 	conn, err := net.DialUDP("udp", lUDPAddr, rUDPAddr)
-	pwmfan.HandleErr(err)
+	HandleErr(err)
 	msg := make([]byte, 64)
 	for {
 		_, err = conn.Write([]byte(cfg.GetToken()))
-		pwmfan.HandleErr(err)
+		HandleErr(err)
 		len, err := conn.Read(msg)
-		pwmfan.HandleErr(err)
-		fmt.Print(msg[:len])
+		HandleErr(err)
+		os.Stdout.Write(msg[:len])
 		time.Sleep(time.Second / time.Duration(cfg.GetSampleRate()))
+	}
+}
+
+// HandleErr panic none nil error
+func HandleErr(err error) {
+	if err != nil {
+		panic(err)
 	}
 }
 
 // ParseJSON parse json file into a Config structure
 func ParseJSON(cfgFilePath string) (cfg Config) {
 	cfgFile, err := os.OpenFile(cfgFilePath, os.O_RDONLY, 0644)
-	pwmfan.HandleErr(err)
+	HandleErr(err)
 	defer cfgFile.Close()
 	jsd := json.NewDecoder(cfgFile)
 	cfg = Config{}
 	err = jsd.Decode(&cfg)
-	pwmfan.HandleErr(err)
+	HandleErr(err)
 	return cfg
+}
+
+//IFNameToIPv4 read a network interface name and return a net.IP
+func IFNameToIPv4(ifname string) (ip net.IP) {
+	iface, err := net.InterfaceByName(ifname)
+	HandleErr(err)
+	addrs, err := iface.Addrs()
+	HandleErr(err)
+	for _, addr := range addrs {
+		ip = addr.(*net.IPNet).IP
+		if len(ip.DefaultMask()) == net.IPv4len {
+			return ip
+		}
+	}
+	HandleErr(errors.New("No IPv4 address"))
+	return nil
 }
 
 // GetRemoteHost get remote host from config
