@@ -1,13 +1,16 @@
+//TODO: move all network relative code into a new repo
+
 package pwmfan
 
 import (
+	"errors"
 	"net"
 )
 
 // ResolveUDPAddr resolve the listening udp address from fan config
 func (fan *Fan) ResolveUDPAddr() {
 	cfg := fan.GetCfg()
-	ip := IFNameToIP(cfg.NetworkInterfaceName)
+	ip := IFNameToIPv4(cfg.NetworkInterfaceName)
 	udpAddr := &net.UDPAddr{
 		IP:   ip,
 		Port: cfg.ListenPort,
@@ -16,14 +19,20 @@ func (fan *Fan) ResolveUDPAddr() {
 	fan.SetUDPAddr(udpAddr)
 }
 
-// IFNameToIP reads an network interface name, return an net.IP, with the first address of the network interface
-func IFNameToIP(ifname string) (ip net.IP) {
+// IFNameToIPv4 reads an network interface name, return an net.IP, with the first address of the network interface
+func IFNameToIPv4(ifname string) (ip net.IP) {
 	iface, err := net.InterfaceByName(ifname)
 	HandleErr(err)
 	addrs, err := iface.Addrs()
 	HandleErr(err)
-	ip = addrs[0].(*net.IPAddr).IP
-	return ip
+	for _, addr := range addrs {
+		ip = addr.(*net.IPNet).IP
+		if len(ip.DefaultMask()) == net.IPv4len {
+			return ip
+		}
+	}
+	HandleErr(errors.New("No IPv4 address"))
+	return nil
 }
 
 // GetUDPAddr get fan's udp listening address
@@ -45,13 +54,14 @@ func (fan *Fan) CreateServer() (udpConn *net.UDPConn) {
 }
 
 // HandleRequest handle request from network
-func (fan Fan) HandleRequest(udpConn *net.UDPConn) {
+func (fan *Fan) HandleRequest(udpConn *net.UDPConn) {
+	//use *Fan for up-to-date data
 	msg := make([]byte, 16)
 	for {
-		cnt, err := udpConn.Read(msg)
+		cnt, rAddr, err := udpConn.ReadFromUDP(msg)
 		HandleErr(err)
 		if string(msg[:cnt]) == fan.GetCfg().Token {
-			udpConn.Write([]byte(fan.String()))
+			udpConn.WriteToUDP([]byte(fan.String()), rAddr)
 		}
 	}
 }
