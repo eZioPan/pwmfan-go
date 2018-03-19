@@ -12,7 +12,7 @@
 	"HighCycle":100,
 	"FullCycle":100,
 	"SampleRate":2,
-	"NetworkInterfaceName":"eth0",
+	"NetworkInterfaceName":"lo",
 	"ListenPort":2334,
 	"Token":"123456789"
 }

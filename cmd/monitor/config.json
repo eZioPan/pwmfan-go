@@ -1,5 +1,5 @@
 {
-	"NetworkInterface":"eth0",
+	"NetworkInterface":"lo",
 	"remoteHost":"localhost",
 	"remotePort": 2334,
 	"Token":"123456789",
