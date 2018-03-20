@@ -1,7 +1,6 @@
 package pwmfan
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/stianeikeland/go-rpio"
@@ -16,7 +15,6 @@ func NewFan(cfg Config) (fan *Fan) {
 	fan.Pin = rpio.Pin(fan.GetCfg().Pin)
 	fan.Pin.Pwm()
 	fan.Pin.Freq(int(fan.GetCfg().PwmFreq))
-	fmt.Println("Create new Fan object")
 	return fan
 }
 
