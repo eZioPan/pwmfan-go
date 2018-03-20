@@ -1,0 +1,194 @@
+#!/bin/bash
+
+BOLD='\e[1m'
+RED='\e[31m'
+BOLDRED='\e[1;31m'
+GREEN='\e[32m'
+BOLDGREEN='\e[1;32m'
+CLR='\e[0m'
+
+SERVICENAME=pwmfan
+PREFIX=/usr/local
+CFGDIR=/etc/${SERVICENAME}
+CFGNAME=config.json
+SYSTEMDUNITDIR=/etc/systemd/system
+
+GOOS=linux
+GOARCH=arm
+
+retcode=0
+
+function checkSystemctl {
+    echo -e "check ${BOLD}systemctl${CLR} exist"
+    systemctl --version >/dev/null 2>&1
+    retcode=$?
+    if [ ${retcode} -ne 0 ]; then
+        echo -e "${BOLDRED}No systemctl found${CLR}"
+        End ${retcode}
+    fi
+    return ${retcode}
+}
+
+function stopService {
+    systemctl status ${1} >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "stop ${1} service"
+        systemctl stop ${1}
+        retcode=$?
+    fi
+    return ${retcode}
+}
+
+function disableService {
+    systemctl status ${1} >/dev/null 2>&1
+    if [ $? -ne 4 ]; then
+        echo "disable ${1} service"
+        systemctl disable ${1}
+        retcode=$?
+    fi
+    return ${retcode}
+}
+
+function createDir {
+    if [ ! -d ${1} ]; then
+        echo -e "Making config directory at ${GREEN}${1}${CLR}"
+        mkdir -p ${1}
+        retcode=$?
+    fi
+    return ${retcode}
+}
+
+function safeCopy {
+    if [ ! -f ${2} ]; then
+        echo -e "copying ${1} into ${GREEN}${2}${CLR}"
+        cp ${1} ${2}
+        retcode=$?
+    else
+        echo -e "found ${GREEN}${2}${CLR}"
+        echo -e "copying new ${1} file as ${GREEN}${2}${3}${CLR}"
+        cp ${1} ${2}${3}
+        retcode=$?
+        if [ ${retcode} -eq 0 ]; then
+        echo -e "You should ${BOLDRED}manually compare${CLR} two files and combine them"
+        fi
+    fi
+    return ${retcode}
+    
+}
+
+function clearRemoveFile {
+    if [ -f ${1} ]; then
+    echo -e "Removing ${Green}${1}${CLR}"
+        rm ${1}
+        retcode=$?
+    else
+        echo -e "${GREEN}${1}${CLR} not found, skipped"
+        retcode=0
+    fi
+    return ${retcode}
+}
+
+function clearRemoveDir {
+    if [ -d ${1} ]; then
+        echo -e "Removing ${Green}${1}${CLR}"
+        rm -r ${1}
+        retcode=$?
+    else
+        echo -e "${GREEN}${1}${CLR} not found, skipped"
+        retcode=0
+    fi
+    return ${retcode}
+}
+
+function Start {
+    echo -e "${BOLD}Install program start${CLR}"
+}
+
+function Help {
+    echo -e "Use ${GREEN}./install build${CLR} to build the program"
+    echo -e "Use ${GREEN}./install install${CLR} to install program into system"
+    echo -e "Use ${GREEN}./install uninstall${CLR} to remove program from system"
+    echo -e "Use ${GREEN}./install help${CLR} to show this help page"
+}
+
+function Build {
+    echo -e "Building ${BOLD}${SERVICENAME}${CLR} from source"
+    go build -o ${SERVICENAME} -v -ldflags "-s -w"
+    retcode=$?
+    if [ ${retcode} -eq 0 ]; then
+        echo -e "${BOLDGREEN}Build success${CLR}"
+    else
+        echo -e "${BOLDRED}Build failed${CLR}"
+    fi
+    return ${retcode}
+}
+
+function Install {
+    echo -e "${BOLD}Start install${CLR}" && \
+    checkSystemctl && \
+    stopService ${SERVICENAME} && \
+    createDir ${CFGDIR} && \
+    safeCopy ${CFGNAME} ${CFGDIR}/${CFGNAME} ".new" && \
+    echo -e "copying ${SERVICENAME} into ${GREEN}${PREFIX}/bin/${SERVICENAME}${CLR}" && \
+    cp ${SERVICENAME} ${PREFIX}/bin/${SERVICENAME} && \
+    cp systemd/${SERVICENAME}.service ${SYSTEMDUNITDIR}/${SERVICENAME}.service && \
+    echo -e "enable ${SERVICENAME} service in systemd" && \
+    systemctl daemon-reload && \
+    systemctl start ${SERVICENAME}.service && \
+    systemctl enable ${SERVICENAME}.service
+    retcode=$?
+    if [ ${retcode} -eq 0 ]; then
+        echo -e "${BOLDGREEN}Install success${CLR}"
+    else
+        echo -e "${BOLDRED}Install failed${CLR}"
+    fi
+    return ${retcode}
+}
+
+function Uninstall {
+    echo -e "${BOLD}Start uninstall${CLR}" && \
+    checkSystemctl && \
+    stopService ${SERVICENAME} && \
+    disableService ${SERVICENAME} && \
+    echo -e "removing ${SERVICENAME} files from system" && \
+    clearRemoveFile ${SYSTEMDUNITDIR}/${SERVICENAME}.service && \
+    clearRemoveFile ${SYSTEMDUNITDIR}/${SERVICENAME}.service.new && \
+    clearRemoveFile ${PREFIX}/bin/${SERVICENAME} && \
+    clearRemoveDir ${CFGDIR}
+    retcode=$?
+    if [ ${retcode} -eq 0 ]; then
+        echo -e "${BOLDGREEN}Uninstall finished${CLR}"
+    else
+        echo -e "${BOLDRED}Uninstall failed${CLR}"
+    fi
+    return ${retcode}
+}
+
+function End {
+    echo -e "${BOLD}Install program exit.${CLR}"
+    exit ${1}
+}
+
+function ArgNumError {
+    echo -e "Want ${GREEN}zero${CLR} or ${GREEN}one${CLR} argument"
+}
+
+Start
+
+cd "$(dirname "$1")"
+
+if [ $# -gt 1 ]; then
+    ArgNumError
+elif [ $# -eq 0 ]; then
+    Help
+elif [ $1 == "build" ]; then
+    Build
+elif [ $1 == "install" ]; then
+    Install
+elif [ $1 == "uninstall" ]; then
+    Uninstall
+else
+    echo "Argument not recogonize"
+fi
+
+End ${retcode}
