@@ -44,7 +44,7 @@ func main() {
 		HandleErr(err)
 		len, err := conn.Read(msg)
 		HandleErr(err)
-		os.Stdout.Write(msg[:len])
+		os.Stdout.Write(append([]byte("\r"), msg[:len-1]...))
 		time.Sleep(time.Second / time.Duration(cfg.GetSampleRate()))
 	}
 }
