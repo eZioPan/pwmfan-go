@@ -1,0 +1,7 @@
+{
+	"NetworkInterface":"lo",
+	"remoteHost":"localhost",
+	"remotePort": 2334,
+	"Token":"123456789",
+	"SampleRate":1
+}

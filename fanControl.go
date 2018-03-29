@@ -1,7 +1,6 @@
 package pwmfan
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/stianeikeland/go-rpio"
@@ -16,11 +15,10 @@ func NewFan(cfg Config) (fan *Fan) {
 	fan.Pin = rpio.Pin(fan.GetCfg().Pin)
 	fan.Pin.Pwm()
 	fan.Pin.Freq(int(fan.GetCfg().PwmFreq))
-	fmt.Println("Create new Fan object")
 	return fan
 }
 
-// Monitor is in todo list
+// Monitor is the function to control fan's real-time stat
 func (fan *Fan) Monitor() {
 	for {
 		fan.SetTemp(ReadCPUTemperature(fan.GetCfg().CPUTempPath, 1000))
@@ -51,7 +49,10 @@ func (fan *Fan) Monitor() {
 		fan.UpdateCycleFromState(LinearClampRemap)
 		fan.Pin.DutyCycle(uint32(fan.GetCycle()), uint32(fan.GetCfg().FullCycle))
 		time.Sleep(time.Second / time.Duration(fan.GetCfg().SampleRate))
-		fmt.Printf("Pin:%v,Temp:%v,Cycle:%v,State:%v,Start:%v,Stop:%v\n", fan.Pin, fan.Temp, fan.Cycle, fan.State, fan.StartCounter, fan.StopCounter)
+
+		// Don't pour rubbish into system log
+		// TODO: try use level classified log
+
 	}
 }
 
