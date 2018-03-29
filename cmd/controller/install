@@ -17,6 +17,8 @@ export GOOS GOARCH
 
 retcode=0
 
+cd "$(dirname "$0")"
+
 function checkProgram {
 	echo -e "check ${BOLD}${1}${CLR} exist"
 	${1} ${2} >/dev/null 2>&1
