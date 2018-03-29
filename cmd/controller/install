@@ -118,6 +118,7 @@ function Help {
 }
 
 function Build {
+	checkProgram go version 0 && \
 	echo -e "Building ${BOLD}${SERVICENAME}${CLR} from source"
 	go build -o ${SERVICENAME} -v -ldflags "-s -w"
 	retcode=$?
