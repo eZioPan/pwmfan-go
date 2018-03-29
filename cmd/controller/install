@@ -71,15 +71,20 @@ function safeCopy {
 		retcode=$?
 	else
 		echo -e "found ${GREEN}${2}${CLR}"
-		echo -e "copying new ${1} file as ${GREEN}${2}${3}${CLR}"
-		cp ${1} ${2}${3}
+		diff -q ${1} ${2} >/dev/null 2>&1
 		retcode=$?
-		if [ ${retcode} -eq 0 ]; then
-		echo -e "You should ${BOLDRED}manually compare${CLR} two files and combine them"
+		if [ ${retcode} -ne 0 ]; then
+			echo -e "copying new ${1} file as ${GREEN}${2}${3}${CLR}"
+			cp ${1} ${2}${3}
+			retcode=$?
+			if [ ${retcode} -eq 0 ]; then
+				echo -e "You should ${BOLD}${RED}manually compare${CLR} two files and combine them"
+			fi
+		else
+			echo -e "${GREEN}${1}${CLR} and ${GREEN}${2}${CLR} are same, ${BOLD}skipped${CLR}"
 		fi
 	fi
 	return ${retcode}
-	
 }
 
 function clearRemoveFile {
@@ -133,12 +138,13 @@ function Build {
 function Install {
 	echo -e "${BOLD}Start install${CLR}" && \
 	checkProgram systemctl --version 0 && \
+	checkProgram diff --version 0 && \
 	stopService ${SERVICENAME} && \
 	createDir ${CFGDIR} && \
 	safeCopy ${CFGNAME} ${CFGDIR}/${CFGNAME} ".new" && \
 	echo -e "copying ${SERVICENAME} into ${GREEN}${PREFIX}/bin/${SERVICENAME}${CLR}" && \
 	cp ${SERVICENAME} ${PREFIX}/bin/${SERVICENAME} && \
-	cp systemd/${SERVICENAME}.service ${SYSTEMDUNITDIR}/${SERVICENAME}.service && \
+	safeCopy systemd/${SERVICENAME}.service ${SYSTEMDUNITDIR}/${SERVICENAME}.service ".new" && \
 	echo -e "enable ${SERVICENAME} service in systemd" && \
 	systemctl daemon-reload && \
 	systemctl start ${SERVICENAME}.service && \
