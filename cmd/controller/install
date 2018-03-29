@@ -17,15 +17,22 @@ export GOOS GOARCH
 
 retcode=0
 
-function checkSystemctl {
-	echo -e "check ${BOLD}systemctl${CLR} exist"
-	systemctl --version >/dev/null 2>&1
+function checkProgram {
+	echo -e "check ${BOLD}${1}${CLR} exist"
+	${1} ${2} >/dev/null 2>&1
 	retcode=$?
-	if [ ${retcode} -ne 0 ]; then
-		echo -e "${BOLDRED}No systemctl found${CLR}"
-		End ${retcode}
+	shift 2
+	for arg in "$@"; do	
+		if [ ${retcode} -eq ${arg} ]; then
+			retcode=0
+			return ${retcode}
+		fi
+	done
+	echo -e "${BOLD}${RED}No ${1} found${CLR}"
+	if [ ${retcode} -eq 0 ]; then
+		retcode=1
 	fi
-	return ${retcode}
+	End ${retcode}
 }
 
 function stopService {
@@ -124,7 +131,7 @@ function Build {
 
 function Install {
 	echo -e "${BOLD}Start install${CLR}" && \
-	checkSystemctl && \
+	checkProgram systemctl --version 0 && \
 	stopService ${SERVICENAME} && \
 	createDir ${CFGDIR} && \
 	safeCopy ${CFGNAME} ${CFGDIR}/${CFGNAME} ".new" && \
@@ -146,7 +153,7 @@ function Install {
 
 function Uninstall {
 	echo -e "${BOLD}Start uninstall${CLR}" && \
-	checkSystemctl && \
+	checkProgram systemctl --version 0 \
 	stopService ${SERVICENAME} && \
 	disableService ${SERVICENAME} && \
 	echo -e "removing ${SERVICENAME} files from system" && \
