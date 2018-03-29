@@ -15,6 +15,7 @@ SYSTEMDUNITDIR=/etc/systemd/system
 
 GOOS=linux
 GOARCH=arm
+export GOOS GOARCH
 
 retcode=0
 
