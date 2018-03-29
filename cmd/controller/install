@@ -2,9 +2,7 @@
 
 BOLD='\e[1m'
 RED='\e[31m'
-BOLDRED='\e[1;31m'
 GREEN='\e[32m'
-BOLDGREEN='\e[1;32m'
 CLR='\e[0m'
 
 SERVICENAME=pwmfan
