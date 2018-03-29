@@ -128,9 +128,9 @@ function Build {
 	go build -o ${SERVICENAME} -v -ldflags "-s -w"
 	retcode=$?
 	if [ ${retcode} -eq 0 ]; then
-		echo -e "${BOLDGREEN}Build success${CLR}"
+		echo -e "${BOLD}${GREEN}Build success${CLR}"
 	else
-		echo -e "${BOLDRED}Build failed${CLR}"
+		echo -e "${BOLD}${RED}Build failed${CLR}"
 	fi
 	return ${retcode}
 }
@@ -151,9 +151,9 @@ function Install {
 	systemctl enable ${SERVICENAME}.service
 	retcode=$?
 	if [ ${retcode} -eq 0 ]; then
-		echo -e "${BOLDGREEN}Install success${CLR}"
+		echo -e "${BOLD}${GREEN}Install success${CLR}"
 	else
-		echo -e "${BOLDRED}Install failed${CLR}"
+		echo -e "${BOLD}${RED}Install failed${CLR}"
 	fi
 	return ${retcode}
 }
@@ -170,9 +170,9 @@ function Uninstall {
 	clearRemoveDir ${CFGDIR}
 	retcode=$?
 	if [ ${retcode} -eq 0 ]; then
-		echo -e "${BOLDGREEN}Uninstall finished${CLR}"
+		echo -e "${BOLD}${GREEN}Uninstall finished${CLR}"
 	else
-		echo -e "${BOLDRED}Uninstall failed${CLR}"
+		echo -e "${BOLD}${RED}Uninstall failed${CLR}"
 	fi
 	return ${retcode}
 }
