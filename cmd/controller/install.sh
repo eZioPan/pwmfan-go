@@ -150,10 +150,10 @@ function Start {
 }
 
 function Help {
-	echo -e "Use ${GREEN}./install build${CLR} to build the program"
-	echo -e "Use ${GREEN}./install install${CLR} to install program into system"
-	echo -e "Use ${GREEN}./install uninstall${CLR} to remove program from system"
-	echo -e "Use ${GREEN}./install help${CLR} to show this help page"
+	echo -e "Use ${GREEN}./install.sh build${CLR} to build the program"
+	echo -e "Use ${GREEN}./install.sh install${CLR} to install program into system"
+	echo -e "Use ${GREEN}./install.sh uninstall${CLR} to remove program from system"
+	echo -e "Use ${GREEN}./install.sh help${CLR} to show this help page"
 }
 
 function Build {
