@@ -64,20 +64,24 @@ func SignalProcess(Process *os.Process, SigChan <-chan os.Signal, Action func())
 }
 
 // LinearRemap is a linear remap function
-func LinearRemap(input float64, opt ...float64) (output float64) {
-	output = (opt[3]-opt[2])/(opt[1]-opt[0])*input + (opt[2] - opt[0]*(opt[3]-opt[2])/(opt[1]-opt[0]))
-	return output
+func LinearRemap(inputs []float64, opt ...float64) (outputs []float64) {
+	res := (opt[3]-opt[2])/(opt[1]-opt[0])*inputs[0] + (opt[2] - opt[0]*(opt[3]-opt[2])/(opt[1]-opt[0]))
+	outputs[0] = res
+	return outputs
 }
 
 // LinearClampRemap is a linear remap function that will clamp output in between opt[2] and opt[3]
-func LinearClampRemap(input float64, opt ...float64) (output float64) {
-	if input <= opt[0] {
-		return opt[2]
-	} else if input <= opt[1] {
-		return LinearRemap(input, opt[0], opt[1], opt[2], opt[3])
+func LinearClampRemap(inputs []float64, opt ...float64) (outputs []float64) {
+	var res float64
+	if inputs[0] <= opt[0] {
+		res = opt[2]
+	} else if inputs[0] <= opt[1] {
+		res = LinearRemap(inputs, opt[0], opt[1], opt[2], opt[3])[0]
 	} else {
-		return opt[3]
+		res = opt[3]
 	}
+	outputs[0] = res
+	return outputs
 }
 
 // TriangularWave is a linear remap will read input and generate a oscillation wave

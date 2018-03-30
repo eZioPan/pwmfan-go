@@ -66,7 +66,6 @@ this function should take 1st argument as an input data,
 then read more input, and output an data
 Example: LinearRemap and LinearClampRemap
 */
-type RemapFunc func(float64, ...float64) float64
 
 func (fan Fan) String() string {
 	return fmt.Sprintf("Pin:%v,Temp:%v,Cycle:%v,State:%v,StartCount:%v,StopCount:%v\n", fan.Pin, fan.Temp, fan.Cycle, fan.State, fan.StartCounter, fan.StopCounter)
@@ -84,3 +83,4 @@ func (state FanState) String() string {
 	}
 	return str
 }
+type RemapFunc func([]float64, ...float64) []float64

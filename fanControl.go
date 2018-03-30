@@ -64,12 +64,12 @@ func (fan *Fan) UpdateCycleFromState(remapper RemapFunc) {
 	case Start:
 		fan.SetCycle(fan.GetCfg().StartCycle)
 	case Run:
-		cycle := remapper(fan.GetTemp(),
+		cycle := remapper([]float64{fan.GetTemp()},
 			fan.GetCfg().LowTemp,
 			fan.GetCfg().HighTemp,
 			float64(fan.GetCfg().LowCycle),
 			float64(fan.GetCfg().HighCycle),
-		)
+		)[0]
 		fan.SetCycle(uint(cycle))
 	}
 }
