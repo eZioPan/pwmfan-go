@@ -1,7 +1,6 @@
 package pwmfan
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/stianeikeland/go-rpio"
@@ -67,8 +66,6 @@ then read more input, and output an data
 Example: LinearRemap and LinearClampRemap
 */
 
-func (fan Fan) String() string {
-	return fmt.Sprintf("Pin:%v,Temp:%v,Cycle:%v,State:%v,StartCount:%v,StopCount:%v\n", fan.Pin, fan.Temp, fan.Cycle, fan.State, fan.StartCounter, fan.StopCounter)
 }
 
 func (state FanState) String() string {
