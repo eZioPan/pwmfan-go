@@ -1,7 +1,10 @@
 package pwmfan
 
 import (
+	"encoding/binary"
+	"math"
 	"net"
+	"strconv"
 
 	"github.com/stianeikeland/go-rpio"
 )
@@ -14,6 +17,50 @@ type TempPair struct {
 	Cycle uint
 	Count uint
 }
+
+// String implements fmt.Stringer interface
+func (tp TempPair) String() (res string) {
+	var tmpstr, cylstr, cntstr string
+	tmpstr = strconv.FormatFloat(tp.Temp, 'f', -1, 64)
+	cylstr = strconv.FormatUint(uint64(tp.Cycle), 10)
+	cntstr = strconv.FormatUint(uint64(tp.Count), 10)
+	res = "Temp: " + tmpstr + "\tCycle: " + cylstr + "\tCount: " + cntstr
+	return res
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler interface
+//
+// As for TempPair, this method will output a 24 bytes binary flow.
+//
+// First 8 bytes for temperature, second 8 bytes for cycle, last 8 bytes for count.
+func (tp TempPair) MarshalBinary() (data []byte, err error) {
+	var tmpbin, cylbin, cntbin []byte
+	binary.BigEndian.PutUint64(tmpbin, math.Float64bits(tp.Temp))
+	binary.BigEndian.PutUint64(cylbin, uint64(tp.Cycle))
+	binary.BigEndian.PutUint64(cntbin, uint64(tp.Count))
+	data = append(append(tmpbin, cylbin...), cntbin...)
+	return data, nil
+}
+
+// UnmarshalBinary implements encoding.BinaryUnmarshaler interface
+//
+// As for TempPair, this method will try to parse a 24 bytes binary flow.
+//
+// First 8 bytes for temperature, second 8 bytes for cycle, last 8 bytes for count.
+func (tp *TempPair) UnmarshalBinary(data []byte) error {
+	var (
+		tmp      float64
+		cyl, cnt uint
+	)
+	tmp = math.Float64frombits(binary.BigEndian.Uint64(data[:8]))
+	cyl = uint(binary.BigEndian.Uint64(data[8:16]))
+	cnt = uint(binary.BigEndian.Uint64(data[16:]))
+	tp.Temp = tmp
+	tp.Cycle = cyl
+	tp.Count = cnt
+	return nil
+}
+
 // NetworkSettings represents a basic network settings
 type NetworkSettings struct {
 	InterfaceName string
