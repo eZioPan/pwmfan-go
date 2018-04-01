@@ -74,12 +74,12 @@ func (fan *Fan) UpdateCycleFromState(remapper RemapFunc) {
 }
 
 // SetState set a fan's current running state
-func (fan *Fan) SetState(state FanState) {
+func (fan *Fan) SetState(state State) {
 	fan.State = state
 }
 
 // GetState get a fan's current running state
-func (fan Fan) GetState() (state FanState) {
+func (fan Fan) GetState() (state State) {
 	return fan.State
 }
 
