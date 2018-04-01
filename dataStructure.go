@@ -2,6 +2,7 @@ package pwmfan
 
 import (
 	"encoding/binary"
+	"errors"
 	"math"
 	"net"
 	"strconv"
@@ -67,6 +68,57 @@ type NetworkSettings struct {
 	ListenPort    uint
 	Token         string
 }
+
+// String implements fmt.Stringer interface
+func (ns NetworkSettings) String() (res string) {
+	lpt := strconv.FormatUint(uint64(ns.ListenPort), 10)
+	res = "InterfaceName: " + ns.InterfaceName + "\tListenPort: " + lpt + "\tToken: " + ns.Token
+	return res
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler interface
+//
+// As for NetworkSettings, this method will output a dynamic length binary flow.
+//
+// First part for NetworkSettings.InterfaceName, using StringToBinary() for converting.
+// Second part for NetworkSettings.ListenPort, 8 bytes.
+// Last part for NetworkSettings.Token, using StringToBinary() for converting.
+func (ns NetworkSettings) MarshalBinary() (data []byte, err error) {
+	var ifn, lpt, tkn []byte
+	ifn, _, err = StringToBinary(ns.InterfaceName)
+	if err != nil {
+		return nil, err
+	}
+	binary.BigEndian.PutUint64(lpt, uint64(ns.ListenPort))
+	tkn, _, err = StringToBinary(ns.Token)
+	if err != nil {
+		return nil, err
+	}
+	data = append(append(ifn, lpt...), tkn...)
+	return data, nil
+}
+
+// UnmarshalBinary implements encoding.BinaryUnmarshaler interface
+//
+// As for NetworkSettings, this method will read a binary flow, parse it into a NetworkSettings
+//
+// First part for NetworkSettings.InterfaceName, using BinaryToString() for converting.
+// Second part for NetworkSettings.ListenPort, 8 bytes.
+// Last part for NetworkSettings.Token, using BinaryToString() for converting.
+func (ns *NetworkSettings) UnmarshalBinary(data []byte) (err error) {
+	var (
+		ifn, tkn string
+		lpt      uint
+	)
+	ifn, n, _ := BinaryToString(data)
+	lpt = uint(binary.BigEndian.Uint64(data[n : n+8]))
+	tkn, _, _ = BinaryToString(data[n+8:])
+	ns.InterfaceName = ifn
+	ns.ListenPort = lpt
+	ns.Token = tkn
+	return nil
+}
+
 // Config contain all information that define a PWM fan's user configuration
 //
 // TODO: try to implement String() method
@@ -136,3 +188,31 @@ func (state State) String() string {
 //
 // Example: LinearRemap and LinearClampRemap
 type RemapFunc func([]float64, ...float64) []float64
+
+// StringToBinary will read a string and convert it into binary flow data, whole data bytes size n, and any occured error err.
+//
+// First byte for total length of output(including the first byte and the str bytes), after first byte, the rest bytes represent the str itself.
+//
+// As for now, the str should not greater than 256 bytes. If str great than 256 bytes, the first 256 bytes and a "overflow" error will return.
+func StringToBinary(str string) (data []byte, n uint, err error) {
+	var raw, lng []byte
+	raw = []byte(str)
+	if len(raw) > 256 {
+		err = errors.New("Overflow: " + str)
+		raw = raw[:256]
+	}
+	n = uint(len(raw))
+	binary.BigEndian.PutUint64(lng, uint64(len(raw)))
+	data = append(lng, raw...)
+	return data, n, err
+}
+
+// BinaryToString is the reverse operation of StringToBinary.
+//
+// It will read a binary flow and convert it into a string str, report total length(including first length byte) of this string, err will always be nil.
+func BinaryToString(data []byte) (str string, n uint, err error) {
+	n = uint(binary.BigEndian.Uint64(data[:8]))
+	str = string(data[8 : 8*n])
+	return str, n, nil
+}
+
