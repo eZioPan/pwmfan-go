@@ -29,15 +29,17 @@ func (tp TempPair) String() (res string) {
 
 // MarshalBinary implements encoding.BinaryMarshaler interface
 //
-// As for TempPair, this method will output a 24 bytes binary flow.
+// As for TempPair, this method will output a 25 bytes binary flow.
 //
-// First 8 bytes for temperature, second 8 bytes for cycle, last 8 bytes for count.
+// First 1 byte for total length of the binary flow, its 24 for TempPair, First 8 bytes for temperature, second 8 bytes for cycle, last 8 bytes for count.
 func (tp TempPair) MarshalBinary() (data []byte, err error) {
-	var tmpbin, cylbin, cntbin []byte
+	const totalLength = uint64(3 * 8)
+	var total, tmpbin, cylbin, cntbin []byte
 	binary.BigEndian.PutUint64(tmpbin, math.Float64bits(tp.Temp))
 	binary.BigEndian.PutUint64(cylbin, uint64(tp.Cycle))
 	binary.BigEndian.PutUint64(cntbin, uint64(tp.Count))
-	data = append(append(tmpbin, cylbin...), cntbin...)
+	binary.BigEndian.PutUint64(total, totalLength)
+	data = append(append(append(total, tmpbin...), cylbin...), cntbin...)
 	return data, nil
 }
 
