@@ -194,7 +194,7 @@ function Install {
 
 function Uninstall {
 	echo -e "${BOLD}Start uninstall${CLR}" && \
-	checkProgram systemctl --version 0 \
+	checkProgram systemctl --version 0 && \
 	stopService ${SERVICENAME} && \
 	disableService ${SERVICENAME} && \
 	echo -e "removing ${SERVICENAME} files from system" && \
