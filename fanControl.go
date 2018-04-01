@@ -3,7 +3,7 @@ package pwmfan
 import (
 	"time"
 
-	"github.com/stianeikeland/go-rpio"
+	rpio "github.com/stianeikeland/go-rpio"
 )
 
 //NewFan initialize a Fan object
@@ -12,9 +12,8 @@ func NewFan(cfg Config) (fan *Fan) {
 	fan.SetState(Stop)
 	fan.SetCycle(0)
 	fan.SetCfg(cfg)
-	fan.Pin = rpio.Pin(fan.GetCfg().Pin)
-	fan.Pin.Pwm()
-	fan.Pin.Freq(int(fan.GetCfg().PwmFreq))
+	rpio.Pin(fan.Pin).Pwm()
+	rpio.Pin(fan.Pin).Freq(int(fan.GetCfg().PwmFreq))
 	return fan
 }
 
@@ -47,7 +46,7 @@ func (fan *Fan) Monitor() {
 			}
 		}
 		fan.UpdateCycleFromState(LinearClampRemap)
-		fan.Pin.DutyCycle(uint32(fan.GetCycle()), uint32(fan.GetCfg().FullCycle))
+		rpio.Pin(fan.Pin).DutyCycle(uint32(fan.GetCycle()), uint32(fan.GetCfg().FullCycle))
 		time.Sleep(time.Second / time.Duration(fan.GetCfg().SampleRate))
 
 		// Don't pour rubbish into system log

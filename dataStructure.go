@@ -6,8 +6,6 @@ import (
 	"math"
 	"net"
 	"strconv"
-
-	"github.com/stianeikeland/go-rpio"
 )
 
 // TempPair represent a temperature and correspond Cycle and Count.
@@ -155,7 +153,7 @@ const (
 //
 // TODO: try to implement String() method
 type Fan struct {
-	Pin     rpio.Pin
+	Pin     uint8
 	Current TempPair
 	StateRecord
 	Cfg     Config
