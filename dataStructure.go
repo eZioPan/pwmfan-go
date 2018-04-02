@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"net"
+	"reflect"
 	"strconv"
 )
 
@@ -193,30 +194,74 @@ func (state State) String() string {
 // Example: LinearRemap and LinearClampRemap
 type RemapFunc func([]float64, ...float64) []float64
 
-// StringToBinary will read a string and convert it into binary flow data, whole data bytes size n, and any occured error err.
-//
-// First byte for total length of output(including the first byte and the str bytes), after first byte, the rest bytes represent the str itself.
-//
-// As for now, the str should not greater than 256 bytes. If str great than 256 bytes, the first 256 bytes and a "overflow" error will return.
-func StringToBinary(str string) (data []byte, n uint, err error) {
-	var raw, lng []byte
-	raw = []byte(str)
-	if len(raw) > 256 {
-		err = errors.New("Overflow: " + str)
-		raw = raw[:256]
+// ConvertToString will read a uint16/float64/string type value, convert them to string.
+// Return result string str and its length n.
+// If value's type is not any above, will return a "Can't convert error".
+func ConvertToString(value interface{}) (str string, n uint, err error) {
+	switch v := value.(type) {
+	case uint16:
+		str = strconv.FormatUint(uint64(v), 10)
+	case float32:
+		str = strconv.FormatFloat(float64(v), 'f', -1, 32)
+	case string:
+		str = v
+	default:
+		err = errors.New("Can't convert type " + reflect.TypeOf(value).String() + " to string")
+		return str, n, err
 	}
-	n = uint(len(raw))
-	binary.BigEndian.PutUint64(lng, uint64(len(raw)))
+	n = uint(len(str))
+	return str, n, err
+}
+
+// ConvertToBinary will read a uint16/float64/string type value, convert them to BigEndian binary flow. With following rules:
+//
+// Binary flow always begins with one byte "total bytes length", including the first byte and any data length.
+//
+// The rest of length defined below:
+//
+// uint16: convert to 2 bytes data,
+//
+// float32: convert to 4 bytes data,
+//
+// string: convert dynamic length bytes data, if string type value byte length great than 256, will retrun a "Overflow error",
+//
+// If value's type is not any above, will return a "Can't convert error".
+func ConvertToBinary(value interface{}) (data []byte, n uint, err error) {
+	var (
+		raw, lng []byte
+	)
+	switch v := value.(type) {
+	case uint16:
+		binary.BigEndian.PutUint16(raw, v)
+	case float32:
+		binary.BigEndian.PutUint32(raw, math.Float32bits(v))
+	case string:
+		raw = []byte(v)
+		if len(raw) > uint8Capacity {
+			err = errors.New("Overflow: " + v)
+			raw = raw[:uint8Capacity]
+		}
+	default:
+		err = errors.New("Can't convert type " + reflect.TypeOf(value).String() + "to binary flow")
+		return data, n, err
+	}
+	n = uint(len(raw) + 1)
+	lng = []byte{byte(n)}
 	data = append(lng, raw...)
 	return data, n, err
 }
 
-// BinaryToString is the reverse operation of StringToBinary.
-//
-// It will read a binary flow and convert it into a string str, report total length(including first length byte) of this string, err will always be nil.
-func BinaryToString(data []byte) (str string, n uint, err error) {
-	n = uint(binary.BigEndian.Uint64(data[:8]))
-	str = string(data[8 : 8*n])
-	return str, n, nil
+// ConvertFromBinary need a uint16/float32/string type pointer, and exact []byte type data, convert data the put it into value.
+func ConvertFromBinary(value interface{}, data []byte) (err error) {
+	switch v := value.(type) {
+	case *uint16:
+		value = binary.BigEndian.Uint16(data)
+	case *float32:
+		value = math.Float32frombits(binary.BigEndian.Uint32(data))
+	case *string:
+		value = string(data)
+	default:
+		err = errors.New("Unsupport type: " + reflect.TypeOf(value).String())
+	}
+	return err
 }
-
