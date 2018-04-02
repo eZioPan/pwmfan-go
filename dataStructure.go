@@ -8,13 +8,17 @@ import (
 	"strconv"
 )
 
+const (
+	uint8Capacity = 1 << 8
+)
+
 // TempPair represent a temperature and correspond Cycle and Count.
 //
 // TempPair struct can be static, as a configuration. Also can be dynamic, as a representation of current fan state.
 type TempPair struct {
-	Temp  float64
-	Cycle uint
-	Count uint
+	Temp  float32
+	Cycle uint16
+	Count uint16
 }
 
 // String implements fmt.Stringer interface
@@ -50,8 +54,8 @@ func (tp TempPair) MarshalBinary() (data []byte, err error) {
 // First 8 bytes for temperature, second 8 bytes for cycle, last 8 bytes for count.
 func (tp *TempPair) UnmarshalBinary(data []byte) error {
 	var (
-		tmp      float64
-		cyl, cnt uint
+		tmp      float32
+		cyl, cnt uint16
 	)
 	tmp = math.Float64frombits(binary.BigEndian.Uint64(data[:8]))
 	cyl = uint(binary.BigEndian.Uint64(data[8:16]))
@@ -65,7 +69,7 @@ func (tp *TempPair) UnmarshalBinary(data []byte) error {
 // NetworkSettings represents a basic network settings
 type NetworkSettings struct {
 	InterfaceName string
-	ListenPort    uint
+	ListenPort    uint16
 	Token         string
 }
 
@@ -108,7 +112,7 @@ func (ns NetworkSettings) MarshalBinary() (data []byte, err error) {
 func (ns *NetworkSettings) UnmarshalBinary(data []byte) (err error) {
 	var (
 		ifn, tkn string
-		lpt      uint
+		lpt      uint16
 	)
 	ifn, n, _ := BinaryToString(data)
 	lpt = uint(binary.BigEndian.Uint64(data[n : n+8]))
@@ -123,11 +127,11 @@ func (ns *NetworkSettings) UnmarshalBinary(data []byte) (err error) {
 //
 // TODO: try to implement String() method
 type Config struct {
-	Pin         uint
+	Pin         uint8
 	CPUTempPath string
-	PwmFreq     uint
-	FullCycle   uint
-	SampleRate  uint
+	PwmFreq     uint16
+	FullCycle   uint16
+	SampleRate  uint16
 	Start       TempPair
 	Stop        TempPair
 	High        TempPair
@@ -137,7 +141,7 @@ type Config struct {
 // State represent Fan's current running state
 //
 // TODO: try to implement String() method
-type State uint
+type State uint8
 
 const (
 	// Stop represent Pwm Fan stay in a full stop state
@@ -165,8 +169,8 @@ type Fan struct {
 // StateRecord represents a Fan's state and state's counter
 type StateRecord struct {
 	State
-	StopCounter  uint
-	StartCounter uint
+	StopCounter  uint16
+	StartCounter uint16
 }
 
 func (state State) String() string {
