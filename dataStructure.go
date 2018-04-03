@@ -23,13 +23,10 @@ type TempPair struct {
 }
 
 // String implements fmt.Stringer interface
-func (tp TempPair) String() (res string) {
-	var tmpstr, cylstr, cntstr string
-	tmpstr = strconv.FormatFloat(tp.Temp, 'f', -1, 64)
-	cylstr = strconv.FormatUint(uint64(tp.Cycle), 10)
-	cntstr = strconv.FormatUint(uint64(tp.Count), 10)
-	res = "Temp: " + tmpstr + "\tCycle: " + cylstr + "\tCount: " + cntstr
-	return res
+func (tp TempPair) String() string {
+	sr, err := StructProbe(tp, ":", "\t")
+	HandleErr(err)
+	return sr.String()
 }
 
 // MarshalBinary implements encoding.BinaryMarshaler interface
@@ -75,10 +72,10 @@ type NetworkSettings struct {
 }
 
 // String implements fmt.Stringer interface
-func (ns NetworkSettings) String() (res string) {
-	lpt := strconv.FormatUint(uint64(ns.ListenPort), 10)
-	res = "InterfaceName: " + ns.InterfaceName + "\tListenPort: " + lpt + "\tToken: " + ns.Token
-	return res
+func (ns NetworkSettings) String() string {
+	sr, err := StructProbe(ns, ":", "\t")
+	HandleErr(err)
+	return sr.String()
 }
 
 // MarshalBinary implements encoding.BinaryMarshaler interface
@@ -125,8 +122,6 @@ func (ns *NetworkSettings) UnmarshalBinary(data []byte) (err error) {
 }
 
 // Config contain all information that define a PWM fan's user configuration
-//
-// TODO: try to implement String() method
 type Config struct {
 	Pin         uint8
 	CPUTempPath string
@@ -139,9 +134,13 @@ type Config struct {
 	NetworkSettings
 }
 
+func (cfg Config) String() string {
+	sr, err := StructProbe(cfg, ":", "\t")
+	HandleErr(err)
+	return sr.String()
+}
+
 // State represent Fan's current running state
-//
-// TODO: try to implement String() method
 type State uint8
 
 const (
@@ -152,27 +151,6 @@ const (
 	// Run represent Pwm Fan stay in a running state
 	Run
 )
-
-// Fan represent a Fan
-//
-// State, Cycle, Temp should be updated 'in realtime'
-// Pin better not be modified after call NewFan()
-//
-// TODO: try to implement String() method
-type Fan struct {
-	Pin     uint8
-	Current TempPair
-	StateRecord
-	Cfg     Config
-	UDPAddr *net.UDPAddr
-}
-
-// StateRecord represents a Fan's state and state's counter
-type StateRecord struct {
-	State
-	StopCounter  uint16
-	StartCounter uint16
-}
 
 func (state State) String() string {
 	var str string
@@ -187,6 +165,37 @@ func (state State) String() string {
 	return str
 }
 
+// Fan represent a Fan
+//
+// State, Cycle, Temp should be updated 'in realtime'
+// Pin better not be modified after call NewFan()
+type Fan struct {
+	Pin     uint8
+	Current TempPair
+	StateRecord
+	Cfg     Config
+	UDPAddr *net.UDPAddr
+}
+
+func (fan Fan) String() string {
+	sr, err := StructProbe(fan, ":", "\t")
+	HandleErr(err)
+	return sr.String()
+}
+
+// StateRecord represents a Fan's state and state's counter
+type StateRecord struct {
+	State
+	StopCounter  uint16
+	StartCounter uint16
+}
+
+func (sRec StateRecord) String() string {
+	sr, err := StructProbe(sRec, ":", "\t")
+	HandleErr(err)
+	return sr.String()
+}
+
 // RemapFunc is a function that read at least one float64 input and output a float64 data
 //
 // More specific,this function should take 1st argument as an input data(s),then read more input, and output result data(s)
@@ -194,11 +203,13 @@ func (state State) String() string {
 // Example: LinearRemap and LinearClampRemap
 type RemapFunc func([]float64, ...float64) []float64
 
-// ConvertToString will read a uint16/float64/string type value, convert them to string.
+// ValueToString will read a uint16/float64/string type value, convert them to string.
 // Return result string str and its length n.
 // If value's type is not any above, will return a "Can't convert error".
-func ConvertToString(value interface{}) (str string, n uint, err error) {
+func ValueToString(value interface{}) (str string, n uint, err error) {
 	switch v := value.(type) {
+	case *StructRepresent:
+		str = v.String()
 	case uint16:
 		str = strconv.FormatUint(uint64(v), 10)
 	case float32:
@@ -264,4 +275,69 @@ func ConvertFromBinary(value interface{}, data []byte) (err error) {
 		err = errors.New("Unsupport type: " + reflect.TypeOf(value).String())
 	}
 	return err
+}
+
+// FieldPair represents a field name & field value pairs of a struct field.
+// Seperator use to seperate Name and Value when string() called
+type FieldPair struct {
+	Name      string
+	Value     interface{}
+	Seperator string
+}
+
+func (fp FieldPair) String() (str string) {
+	valueStr, _, err := ValueToString(fp.Value)
+	// TODO: define a error type for compare and handle error
+	HandleErr(err)
+	name := fp.Name
+	sep := fp.Seperator
+	str = name + sep + valueStr
+	return str
+}
+
+// StructRepresent store all fields' name/value pairs of a struct.
+// Delimeter is the string bwtween two FildPairs when string() called.
+type StructRepresent struct {
+	Pair      []FieldPair
+	Delimeter string
+}
+
+// StructProbe read a struct value, output all FieldPair(s) of the structure.
+// Sep sets FieldPair.Seperator. Deli sets StructRepresent.Delimeter.
+// If structure is not a struct value, then it will return an "Not a struct" error.
+func StructProbe(structure interface{}, sep string, deli string) (sr *StructRepresent, err error) {
+	rv := reflect.ValueOf(structure)
+	rt := reflect.TypeOf(structure)
+	if rt.Kind() != reflect.Struct {
+		err = errors.New("Value: " + rt.String() + " is not a struct")
+		return sr, err
+	}
+	nf := rt.NumField()
+	sr = new(StructRepresent)
+	sr.Pair = make([]FieldPair, nf, nf)
+	sr.Delimeter = deli
+	var fp FieldPair
+	for i := 0; i < nf; i++ {
+		fp.Name = rt.Field(i).Name
+		value := rv.Field(i).Interface()
+		if reflect.TypeOf(value).Kind() == reflect.Struct {
+			value, _ = StructProbe(value, sep, deli)
+		}
+		fp.Value = value
+		fp.Seperator = sep
+		sr.Pair[i] = fp
+	}
+	return sr, nil
+}
+
+func (rs StructRepresent) String() (str string) {
+	lng := len(rs.Pair)
+	for i, fp := range rs.Pair {
+		str += fp.String()
+		if i < lng {
+			// TODO: Find a way to insert delimeter correct
+			//str += rs.Delimeter
+		}
+	}
+	return str
 }
