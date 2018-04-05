@@ -7,6 +7,7 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -203,12 +204,12 @@ func (sRec StateRecord) String() string {
 // Example: LinearRemap and LinearClampRemap
 type RemapFunc func([]float64, ...float64) []float64
 
-// ValueToString will read a uint16/float64/string type value, convert them to string.
-// Return result string str and its length n.
+// ValueToString will read a uint16/float64/string/StructRepresent type value, convert them to string.
+// Return result string str and any error.
 // If value's type is not any above, will return a "Can't convert error".
-func ValueToString(value interface{}) (str string, n uint, err error) {
+func ValueToString(value interface{}) (str string, err error) {
 	switch v := value.(type) {
-	case *StructRepresent:
+	case StructRepresent:
 		str = v.String()
 	case uint16:
 		str = strconv.FormatUint(uint64(v), 10)
@@ -218,13 +219,12 @@ func ValueToString(value interface{}) (str string, n uint, err error) {
 		str = v
 	default:
 		err = errors.New("Can't convert type " + reflect.TypeOf(value).String() + " to string")
-		return str, n, err
+		return str, err
 	}
-	n = uint(len(str))
-	return str, n, err
+	return str, err
 }
 
-// ConvertToBinary will read a uint16/float64/string type value, convert them to BigEndian binary flow. With following rules:
+// ValueToBinary will read a uint16/float64/string type value, convert them to BigEndian binary flow. With following rules:
 //
 // Binary flow always begins with one byte "total bytes length", including the first byte and any data length.
 //
@@ -237,7 +237,7 @@ func ValueToString(value interface{}) (str string, n uint, err error) {
 // string: convert dynamic length bytes data, if string type value byte length great than 256, will retrun a "Overflow error",
 //
 // If value's type is not any above, will return a "Can't convert error".
-func ConvertToBinary(value interface{}) (data []byte, n uint, err error) {
+func ValueToBinary(value interface{}) (data []byte, n uint, err error) {
 	var (
 		raw, lng []byte
 	)
@@ -262,9 +262,9 @@ func ConvertToBinary(value interface{}) (data []byte, n uint, err error) {
 	return data, n, err
 }
 
-// ConvertFromBinary need a uint16/float32/string type pointer, and exact []byte type data, convert data the put it into value.
-func ConvertFromBinary(value interface{}, data []byte) (err error) {
-	switch v := value.(type) {
+// ValueFromBinary need a uint16/float32/string type pointer, and exact []byte type data, convert data the put it into value.
+func ValueFromBinary(value interface{}, data []byte) (n uint, err error) {
+	switch value.(type) {
 	case *uint16:
 		value = binary.BigEndian.Uint16(data)
 	case *float32:
@@ -274,7 +274,7 @@ func ConvertFromBinary(value interface{}, data []byte) (err error) {
 	default:
 		err = errors.New("Unsupport type: " + reflect.TypeOf(value).String())
 	}
-	return err
+	return 0, err
 }
 
 // FieldPair represents a field name & field value pairs of a struct field.
@@ -286,7 +286,7 @@ type FieldPair struct {
 }
 
 func (fp FieldPair) String() (str string) {
-	valueStr, _, err := ValueToString(fp.Value)
+	valueStr, err := ValueToString(fp.Value)
 	// TODO: define a error type for compare and handle error
 	HandleErr(err)
 	name := fp.Name
@@ -295,17 +295,18 @@ func (fp FieldPair) String() (str string) {
 	return str
 }
 
-// StructRepresent store all fields' name/value pairs of a struct.
+// StructRepresent store the struct type and all fields' name/value pairs of a struct.
 // Delimeter is the string bwtween two FildPairs when string() called.
 type StructRepresent struct {
+	Type      reflect.Type
 	Pair      []FieldPair
 	Delimeter string
 }
 
-// StructProbe read a struct value, output all FieldPair(s) of the structure.
+// StructProbe read a struct value, output a StructRepresent of the structure.
 // Sep sets FieldPair.Seperator. Deli sets StructRepresent.Delimeter.
 // If structure is not a struct value, then it will return an "Not a struct" error.
-func StructProbe(structure interface{}, sep string, deli string) (sr *StructRepresent, err error) {
+func StructProbe(structure interface{}, sep string, deli string) (sr StructRepresent, err error) {
 	rv := reflect.ValueOf(structure)
 	rt := reflect.TypeOf(structure)
 	if rt.Kind() != reflect.Struct {
@@ -313,7 +314,7 @@ func StructProbe(structure interface{}, sep string, deli string) (sr *StructRepr
 		return sr, err
 	}
 	nf := rt.NumField()
-	sr = new(StructRepresent)
+	sr.Type = rt
 	sr.Pair = make([]FieldPair, nf, nf)
 	sr.Delimeter = deli
 	var fp FieldPair
@@ -330,13 +331,23 @@ func StructProbe(structure interface{}, sep string, deli string) (sr *StructRepr
 	return sr, nil
 }
 
+// indentCount is a global counter for counting indent table of a nest struct
+var indentCount int
+
 func (rs StructRepresent) String() (str string) {
 	lng := len(rs.Pair)
 	for i, fp := range rs.Pair {
-		str += fp.String()
-		if i < lng {
-			// TODO: Find a way to insert delimeter correct
-			//str += rs.Delimeter
+		if i == 0 {
+			str += rs.Type.String() + "{" + rs.Delimeter
+			indentCount++
+		}
+		str += strings.Repeat("\t", indentCount) + fp.String()
+		if i < lng-1 {
+			str += rs.Delimeter
+		}
+		if i == lng-1 {
+			indentCount--
+			str += rs.Delimeter + strings.Repeat("\t", indentCount) + "}"
 		}
 	}
 	return str
