@@ -295,6 +295,12 @@ func (fp FieldPair) String() (str string) {
 	return str
 }
 
+// MarshalBinary implements binary.BinaryMarshaler
+func (fp FieldPair) MarshalBinary() (data []byte, err error) {
+	data, _, err = ValueToBinary(fp.Value)
+	return data, err
+}
+
 // StructRepresent store the struct type and all fields' name/value pairs of a struct.
 // Delimeter is the string bwtween two FildPairs when string() called.
 type StructRepresent struct {
