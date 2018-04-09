@@ -357,4 +357,19 @@ func (rs StructRepresent) String() (str string) {
 		}
 	}
 	return str
+// MarshalBinary implements binary.BinaryMarshaler
+func (rs StructRepresent) MarshalBinary() (data []byte, err error) {
+	var (
+		curData []byte
+		curErr  error
+	)
+	for i, fp := range rs.Pair {
+		curData, curErr = fp.MarshalBinary()
+		if err != nil {
+			return data, curErr
+		}
+		data = append(data, curData...)
+	}
+	return data, err
+}
 }
