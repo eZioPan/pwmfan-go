@@ -372,4 +372,19 @@ func (rs StructRepresent) MarshalBinary() (data []byte, err error) {
 	}
 	return data, err
 }
+
+func GetValueFromStruct(structure interface{}, name string, value interface{}) (err error) {
+	sr, err := StructProbe(structure, "", "")
+	if err != nil {
+		return err
+	}
+	for _, item := range sr.Pair {
+		if name == item.Name {
+			value = item.Value
+			return nil
+		}
+	}
+	err = errors.New("No Field Found")
+	return err
+}
 }
