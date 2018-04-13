@@ -387,4 +387,22 @@ func GetValueFromStruct(structure interface{}, name string, value interface{}) (
 	err = errors.New("No Field Found")
 	return err
 }
+ 
+func SetValueToStruct(structure interface{}, name string, value interface{}) (err error) {
+	rt := reflect.TypeOf(structure)
+	rv := reflect.ValueOf(structure)
+	if rt.Kind() != reflect.Struct {
+		err = errors.New("No a structure")
+		return err
+	}
+	numField := rt.NumField()
+	for i := 0; i < numField; i++ {
+		if rt.Field(i).Name == name {
+			vrv := reflect.ValueOf(value)
+			rv.Field(i).Set(vrv)
+			return nil
+		}
+	}
+	err = errors.New("No Field Found")
+	return err
 }
