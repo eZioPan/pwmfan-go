@@ -242,6 +242,8 @@ func ValueToBinary(value interface{}) (data []byte, n uint, err error) {
 		raw, lng []byte
 	)
 	switch v := value.(type) {
+	case StructRepresent:
+		raw, err = v.MarshalBinary()
 	case uint16:
 		binary.BigEndian.PutUint16(raw, v)
 	case float32:
@@ -357,6 +359,8 @@ func (rs StructRepresent) String() (str string) {
 		}
 	}
 	return str
+} 
+
 // MarshalBinary implements binary.BinaryMarshaler
 func (rs StructRepresent) MarshalBinary() (data []byte, err error) {
 	var (
