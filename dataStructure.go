@@ -36,14 +36,10 @@ func (tp TempPair) String() string {
 //
 // First 1 byte for total length of the binary flow, its 24 for TempPair, First 8 bytes for temperature, second 8 bytes for cycle, last 8 bytes for count.
 func (tp TempPair) MarshalBinary() (data []byte, err error) {
-	const totalLength = uint64(3 * 8)
-	var total, tmpbin, cylbin, cntbin []byte
-	binary.BigEndian.PutUint64(tmpbin, math.Float64bits(tp.Temp))
-	binary.BigEndian.PutUint64(cylbin, uint64(tp.Cycle))
-	binary.BigEndian.PutUint64(cntbin, uint64(tp.Count))
-	binary.BigEndian.PutUint64(total, totalLength)
-	data = append(append(append(total, tmpbin...), cylbin...), cntbin...)
-	return data, nil
+	sr, err := StructProbe(tp, ":", "\t")
+	HandleErr(err)
+	data, err = sr.MarshalBinary()
+	return data, err
 }
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaler interface
@@ -56,9 +52,9 @@ func (tp *TempPair) UnmarshalBinary(data []byte) error {
 		tmp      float32
 		cyl, cnt uint16
 	)
-	tmp = math.Float64frombits(binary.BigEndian.Uint64(data[:8]))
-	cyl = uint(binary.BigEndian.Uint64(data[8:16]))
-	cnt = uint(binary.BigEndian.Uint64(data[16:]))
+	tmp = math.Float32frombits(binary.BigEndian.Uint32(data[:8]))
+	cyl = binary.BigEndian.Uint16(data[8:16])
+	cnt = binary.BigEndian.Uint16(data[16:])
 	tp.Temp = tmp
 	tp.Cycle = cyl
 	tp.Count = cnt
@@ -87,18 +83,10 @@ func (ns NetworkSettings) String() string {
 // Second part for NetworkSettings.ListenPort, 8 bytes.
 // Last part for NetworkSettings.Token, using StringToBinary() for converting.
 func (ns NetworkSettings) MarshalBinary() (data []byte, err error) {
-	var ifn, lpt, tkn []byte
-	ifn, _, err = StringToBinary(ns.InterfaceName)
-	if err != nil {
-		return nil, err
-	}
-	binary.BigEndian.PutUint64(lpt, uint64(ns.ListenPort))
-	tkn, _, err = StringToBinary(ns.Token)
-	if err != nil {
-		return nil, err
-	}
-	data = append(append(ifn, lpt...), tkn...)
-	return data, nil
+	sr, err := StructProbe(ns, ":", "\t")
+	HandleErr(err)
+	data, err = sr.MarshalBinary()
+	return data, err
 }
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaler interface
@@ -109,16 +97,6 @@ func (ns NetworkSettings) MarshalBinary() (data []byte, err error) {
 // Second part for NetworkSettings.ListenPort, 8 bytes.
 // Last part for NetworkSettings.Token, using BinaryToString() for converting.
 func (ns *NetworkSettings) UnmarshalBinary(data []byte) (err error) {
-	var (
-		ifn, tkn string
-		lpt      uint16
-	)
-	ifn, n, _ := BinaryToString(data)
-	lpt = uint(binary.BigEndian.Uint64(data[n : n+8]))
-	tkn, _, _ = BinaryToString(data[n+8:])
-	ns.InterfaceName = ifn
-	ns.ListenPort = lpt
-	ns.Token = tkn
 	return nil
 }
 
