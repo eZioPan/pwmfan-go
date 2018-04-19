@@ -23,7 +23,7 @@ func (fan *Fan) Monitor() {
 		fan.SetTemp(ReadCPUTemperature(fan.GetCfg().CPUTempPath, 1000))
 		switch fan.GetState() {
 		case Stop:
-			if fan.GetTemp() >= fan.GetCfg().StartTemp && fan.GetStartCounter() < fan.GetCfg().StartCount {
+			if fan.GetTemp() >= fan.GetCfg().StartTemp && fan.StartCounter < fan.GetCfg().StartCount {
 				fan.SetStartCounter(fan.GetStartCounter() + 1)
 			} else if fan.GetTemp() <= fan.GetCfg().StartTemp && fan.GetStartCounter() > 0 {
 				fan.SetStartCounter(fan.GetStartCounter() - 1)
@@ -35,9 +35,9 @@ func (fan *Fan) Monitor() {
 		case Start:
 			fan.SetState(Run)
 		case Run:
-			if fan.GetTemp() <= fan.GetCfg().LowTemp && fan.GetStopCounter() < fan.GetCfg().StopCount {
+			if fan.GetTemp() <= fan.GetCfg().LowTemp && fan.StopCounter < fan.GetCfg().StopCount {
 				fan.SetStopCounter(fan.GetStopCounter() + 1)
-			} else if fan.GetTemp() >= fan.GetCfg().LowTemp && fan.GetStopCounter() > 0 {
+			} else if fan.GetTemp() >= fan.GetCfg().LowTemp && fan.StopCounter > 0 {
 				fan.SetStopCounter(fan.GetStopCounter() - 1)
 			}
 			if fan.GetStopCounter() >= fan.GetCfg().StopCount {
@@ -71,64 +71,4 @@ func (fan *Fan) UpdateCycleFromState(remapper RemapFunc) {
 		)[0]
 		fan.SetCycle(uint(cycle))
 	}
-}
-
-// SetState set a fan's current running state
-func (fan *Fan) SetState(state State) {
-	fan.State = state
-}
-
-// GetState get a fan's current running state
-func (fan Fan) GetState() (state State) {
-	return fan.State
-}
-
-// SetCfg set a fan's configuration
-func (fan *Fan) SetCfg(cfg Config) {
-	fan.Cfg = cfg
-}
-
-// GetCfg get a fan's configuration
-func (fan Fan) GetCfg() (cfg Config) {
-	return fan.Cfg
-}
-
-// SetCycle set fan's current pwm duty cycle information
-func (fan *Fan) SetCycle(cycle uint) {
-	fan.Cycle = cycle
-}
-
-// GetCycle get fan's current pwm duty cycle information
-func (fan Fan) GetCycle() (cycle uint) {
-	return fan.Cycle
-}
-
-// SetTemp set fan's current loaded temperature information
-func (fan *Fan) SetTemp(temp float64) {
-	fan.Temp = temp
-}
-
-// GetTemp get fan's current loaded temperature information
-func (fan Fan) GetTemp() (temp float64) {
-	return fan.Temp
-}
-
-// SetStartCounter set fan's current start counter
-func (fan *Fan) SetStartCounter(num uint) {
-	fan.StartCounter = num
-}
-
-// GetStartCounter get fan's current start counter
-func (fan Fan) GetStartCounter() (num uint) {
-	return fan.StartCounter
-}
-
-// SetStopCounter set fan's current stop counter
-func (fan *Fan) SetStopCounter(num uint) {
-	fan.StopCounter = num
-}
-
-// GetStopCounter get fan's current stop counter
-func (fan Fan) GetStopCounter() (num uint) {
-	return fan.StopCounter
 }

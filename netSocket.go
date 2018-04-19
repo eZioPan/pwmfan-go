@@ -56,7 +56,7 @@ func (fan *Fan) CreateServer() (udpConn *net.UDPConn) {
 // HandleRequest handle request from network
 func (fan *Fan) HandleRequest(udpConn *net.UDPConn) {
 	//use *Fan for up-to-date data
-	msg := make([]byte, 16)
+	msg := make([]byte, 64)
 	for {
 		cnt, rAddr, err := udpConn.ReadFromUDP(msg)
 		HandleErr(err)
