@@ -45,11 +45,12 @@ func main() {
 	for {
 		_, err = conn.Write([]byte(cfg.GetToken()))
 		common.HandleErr(err)
-		len, err := conn.Read(msg)
+		lng, err := conn.Read(msg)
 		common.HandleErr(err)
 		cls := strings.Repeat(" ", lastMsgLen)
+		lastMsgLen = lng
 		os.Stdout.Write(append([]byte("\r"), []byte(cls)...))
-		os.Stdout.Write(append([]byte("\r"), msg[:len]...))
+		os.Stdout.Write(append([]byte("\r"), msg[:lng]...))
 		time.Sleep(time.Second / time.Duration(cfg.GetSampleRate()))
 	}
 }
