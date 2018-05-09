@@ -10,7 +10,7 @@ import (
 //NewFan initialize a Fan object
 func NewFan(cfg common.Config) (fan *common.Fan) {
 	fan = new(common.Fan)
-	fan.StateRecord.State = common.Stop
+	fan.Trigger.State = common.Stop
 	fan.Current.Cycle = 0
 	fan.Cfg = cfg
 	fan.Pin = fan.Cfg.Pin
@@ -23,32 +23,36 @@ func NewFan(cfg common.Config) (fan *common.Fan) {
 func Monitor(fan *common.Fan) {
 	for {
 		fan.Current.Temp = common.ReadCPUTemperature(fan.Cfg.CPUTempPath, 1000)
-		switch fan.StateRecord.State {
+		switch fan.Trigger.State {
 		case common.Stop:
-			if fan.Current.Temp >= fan.Cfg.Start.Temp && fan.StateRecord.Count < fan.Cfg.Start.Count {
-				fan.StateRecord.Count++
-			} else if fan.Current.Temp <= fan.Cfg.Start.Temp && fan.StateRecord.Count > 0 {
-				fan.StateRecord.Count--
+			if fan.Current.Temp >= fan.Cfg.Start.Temp && fan.Trigger.Count < fan.Cfg.Start.Count {
+				fan.Trigger.Count++
+			} else if fan.Current.Temp <= fan.Cfg.Start.Temp && fan.Trigger.Count > 0 {
+				fan.Trigger.Count--
 			}
-			if fan.StateRecord.Count >= fan.Cfg.Start.Count {
-				fan.StateRecord.State = common.Start
-				fan.StateRecord.Count = 0
+			if fan.Trigger.Count >= fan.Cfg.Start.Count {
+				fan.Trigger.State = common.Start
+				fan.Trigger.Count = 0
+				fan.Current.Count = 0
 			}
 		case common.Start:
-			fan.StateRecord.State = common.Run
-			fan.StateRecord.Count = 0
+			fan.Trigger.State = common.Run
+			fan.Trigger.Count = 0
+			fan.Current.Count = 0
 		case common.Run:
-			if fan.Current.Temp <= fan.Cfg.Low.Temp && fan.StateRecord.Count < fan.Cfg.Low.Count {
-				fan.StateRecord.Count++
-			} else if fan.Current.Temp >= fan.Cfg.Low.Temp && fan.StateRecord.Count > 0 {
-				fan.StateRecord.Count--
+			if fan.Current.Temp <= fan.Cfg.Low.Temp && fan.Trigger.Count < fan.Cfg.Low.Count {
+				fan.Trigger.Count++
+			} else if fan.Current.Temp >= fan.Cfg.Low.Temp && fan.Trigger.Count > 0 {
+				fan.Trigger.Count--
 			}
-			if fan.StateRecord.Count >= fan.Cfg.Low.Count {
-				fan.StateRecord.State = common.Stop
-				fan.StateRecord.Count = 0
+			if fan.Trigger.Count >= fan.Cfg.Low.Count {
+				fan.Trigger.State = common.Stop
+				fan.Trigger.Count = 0
+				fan.Current.Count = 0
 			}
 		}
 		UpdateCycleFromState(fan, common.LinearClampRemap)
+		fan.Current.Count++
 		rpio.Pin(fan.Pin).DutyCycle(fan.Current.Cycle, fan.Cfg.FullCycle)
 		time.Sleep(time.Second / time.Duration(fan.Cfg.SampleRate))
 
@@ -59,7 +63,7 @@ func Monitor(fan *common.Fan) {
 
 // UpdateCycleFromState update pwm fan's Cycle information from State information
 func UpdateCycleFromState(fan *common.Fan, remapper common.RemapFunc) {
-	switch fan.StateRecord.State {
+	switch fan.Trigger.State {
 	case common.Stop:
 		fan.Current.Cycle = fan.Cfg.StopCycle
 	case common.Start:
