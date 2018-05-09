@@ -3,72 +3,74 @@ package pwmfan
 import (
 	"time"
 
+	"github.com/eZioPan/pwmfan-go/common"
 	rpio "github.com/stianeikeland/go-rpio"
 )
 
 //NewFan initialize a Fan object
-func NewFan(cfg Config) (fan *Fan) {
-	fan = new(Fan)
-	fan.SetState(Stop)
-	fan.SetCycle(0)
-	fan.SetCfg(cfg)
+func NewFan(cfg common.Config) (fan *common.Fan) {
+	fan = new(common.Fan)
+	fan.StateRecord.State = common.Stop
+	fan.Current.Cycle = 0
+	fan.Cfg = cfg
+	fan.Pin = fan.Cfg.Pin
 	rpio.Pin(fan.Pin).Pwm()
-	rpio.Pin(fan.Pin).Freq(int(fan.GetCfg().PwmFreq))
+	rpio.Pin(fan.Pin).Freq(int(fan.Cfg.PwmFreq))
 	return fan
 }
 
 // Monitor is the function to control fan's real-time stat
-func (fan *Fan) Monitor() {
+func Monitor(fan *common.Fan) {
 	for {
-		fan.SetTemp(ReadCPUTemperature(fan.GetCfg().CPUTempPath, 1000))
-		switch fan.GetState() {
-		case Stop:
-			if fan.GetTemp() >= fan.GetCfg().StartTemp && fan.StartCounter < fan.GetCfg().StartCount {
-				fan.SetStartCounter(fan.GetStartCounter() + 1)
-			} else if fan.GetTemp() <= fan.GetCfg().StartTemp && fan.GetStartCounter() > 0 {
-				fan.SetStartCounter(fan.GetStartCounter() - 1)
+		fan.Current.Temp = common.ReadCPUTemperature(fan.Cfg.CPUTempPath, 1000)
+		switch fan.StateRecord.State {
+		case common.Stop:
+			if fan.Current.Temp >= fan.Cfg.Start.Temp && fan.StateRecord.Count < fan.Cfg.Start.Count {
+				fan.StateRecord.Count++
+			} else if fan.Current.Temp <= fan.Cfg.Start.Temp && fan.StateRecord.Count > 0 {
+				fan.StateRecord.Count--
 			}
-			if fan.GetStartCounter() >= fan.GetCfg().StartCount {
-				fan.SetState(Start)
-				fan.SetStartCounter(0)
+			if fan.StateRecord.Count >= fan.Cfg.Start.Count {
+				fan.StateRecord.State = common.Start
+				fan.StateRecord.Count = 0
 			}
-		case Start:
-			fan.SetState(Run)
-		case Run:
-			if fan.GetTemp() <= fan.GetCfg().LowTemp && fan.StopCounter < fan.GetCfg().StopCount {
-				fan.SetStopCounter(fan.GetStopCounter() + 1)
-			} else if fan.GetTemp() >= fan.GetCfg().LowTemp && fan.StopCounter > 0 {
-				fan.SetStopCounter(fan.GetStopCounter() - 1)
+		case common.Start:
+			fan.StateRecord.State = common.Run
+			fan.StateRecord.Count = 0
+		case common.Run:
+			if fan.Current.Temp <= fan.Cfg.Low.Temp && fan.StateRecord.Count < fan.Cfg.Low.Count {
+				fan.StateRecord.Count++
+			} else if fan.Current.Temp >= fan.Cfg.Low.Temp && fan.StateRecord.Count > 0 {
+				fan.StateRecord.Count--
 			}
-			if fan.GetStopCounter() >= fan.GetCfg().StopCount {
-				fan.SetState(Stop)
-				fan.SetStopCounter(0)
+			if fan.StateRecord.Count >= fan.Cfg.Low.Count {
+				fan.StateRecord.State = common.Stop
+				fan.StateRecord.Count = 0
 			}
 		}
-		fan.UpdateCycleFromState(LinearClampRemap)
-		rpio.Pin(fan.Pin).DutyCycle(uint32(fan.GetCycle()), uint32(fan.GetCfg().FullCycle))
-		time.Sleep(time.Second / time.Duration(fan.GetCfg().SampleRate))
+		UpdateCycleFromState(fan, common.LinearClampRemap)
+		rpio.Pin(fan.Pin).DutyCycle(fan.Current.Cycle, fan.Cfg.FullCycle)
+		time.Sleep(time.Second / time.Duration(fan.Cfg.SampleRate))
 
 		// Don't pour rubbish into system log
 		// TODO: try use level classified log
-
 	}
 }
 
 // UpdateCycleFromState update pwm fan's Cycle information from State information
-func (fan *Fan) UpdateCycleFromState(remapper RemapFunc) {
-	switch fan.GetState() {
-	case Stop:
-		fan.SetCycle(fan.GetCfg().StopCycle)
-	case Start:
-		fan.SetCycle(fan.GetCfg().StartCycle)
-	case Run:
-		cycle := remapper([]float64{fan.GetTemp()},
-			fan.GetCfg().LowTemp,
-			fan.GetCfg().HighTemp,
-			float64(fan.GetCfg().LowCycle),
-			float64(fan.GetCfg().HighCycle),
+func UpdateCycleFromState(fan *common.Fan, remapper common.RemapFunc) {
+	switch fan.StateRecord.State {
+	case common.Stop:
+		fan.Current.Cycle = fan.Cfg.StopCycle
+	case common.Start:
+		fan.Current.Cycle = fan.Cfg.Start.Cycle
+	case common.Run:
+		cycle := remapper([]float64{fan.Current.Temp},
+			fan.Cfg.Low.Temp,
+			fan.Cfg.High.Temp,
+			float64(fan.Cfg.Low.Cycle),
+			float64(fan.Cfg.High.Cycle),
 		)[0]
-		fan.SetCycle(uint(cycle))
+		fan.Current.Cycle = uint32(cycle)
 	}
 }

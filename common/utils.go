@@ -1,4 +1,4 @@
-package pwmfan
+package common
 
 import (
 	"encoding/json"
@@ -16,15 +16,13 @@ func HandleErr(err error) {
 }
 
 // ParseJSON parse json file into a Config structure
-func ParseJSON(cfgFilePath string) (cfg Config) {
+func ParseJSON(cfgFilePath string, cfg interface{}) {
 	cfgFile, err := os.OpenFile(cfgFilePath, os.O_RDONLY, 0644)
 	HandleErr(err)
 	defer cfgFile.Close()
 	jsd := json.NewDecoder(cfgFile)
-	cfg = Config{}
-	err = jsd.Decode(&cfg)
+	err = jsd.Decode(cfg)
 	HandleErr(err)
-	return cfg
 }
 
 // ReadCPUTemperature read temprature once from a file and divie raw data by a divider
@@ -66,7 +64,7 @@ func SignalProcess(Process *os.Process, SigChan <-chan os.Signal, Action func())
 // LinearRemap is a linear remap function
 func LinearRemap(inputs []float64, opt ...float64) (outputs []float64) {
 	res := (opt[3]-opt[2])/(opt[1]-opt[0])*inputs[0] + (opt[2] - opt[0]*(opt[3]-opt[2])/(opt[1]-opt[0]))
-	outputs[0] = res
+	outputs = append(outputs, res)
 	return outputs
 }
 
@@ -80,7 +78,7 @@ func LinearClampRemap(inputs []float64, opt ...float64) (outputs []float64) {
 	} else {
 		res = opt[3]
 	}
-	outputs[0] = res
+	outputs = append(outputs, res)
 	return outputs
 }
 

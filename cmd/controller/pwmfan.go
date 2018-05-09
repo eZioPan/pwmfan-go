@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/eZioPan/pwmfan-go"
+	"github.com/eZioPan/pwmfan-go/common"
 	"github.com/stianeikeland/go-rpio"
 )
 
@@ -16,7 +17,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&configPath, "config", "config.json", "system temperature file")
+	flag.StringVar(&configPath, "config", "config.json", "controller configuration file path")
 }
 
 func main() {
@@ -24,23 +25,25 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGHUP)
 	err := rpio.Open()
-	pwmfan.HandleErr(err)
+	common.HandleErr(err)
 	defer rpio.Close()
-	fan0 := pwmfan.NewFan(pwmfan.ParseJSON(configPath))
+	cfg := &common.Config{}
+	common.ParseJSON(configPath, cfg)
+	fan0 := pwmfan.NewFan(*cfg)
 	action := func() {
 		fmt.Println("Catch Signal, perpare to exit")
-		fan0.Pin.Output()
-		fan0.Pin.Low()
+		rpio.Pin(fan0.Pin).Output()
+		rpio.Pin(fan0.Pin).Low()
 		rpio.Close()
 		fmt.Println("Terminating")
 	}
 	p, err := os.FindProcess(os.Getpid())
-	pwmfan.HandleErr(err)
-	go pwmfan.SignalProcess(p, sigChan, action)
+	common.HandleErr(err)
+	go common.SignalProcess(p, sigChan, action)
 
 	srvConn := fan0.CreateServer()
 	go fan0.HandleRequest(srvConn)
 
-	fan0.Monitor()
+	pwmfan.Monitor(fan0)
 
 }

@@ -1,13 +1,14 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"flag"
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/eZioPan/pwmfan-go/common"
 )
 
 // Config represent a client config
@@ -24,64 +25,33 @@ var (
 )
 
 func init() {
-	flag.StringVar(&configPath, "config", "config.json", "system temperature file")
+	flag.StringVar(&configPath, "config", "config.json", "monitor configuration file path")
 }
 
 func main() {
 	flag.Parse()
-	cfg := ParseJSON(configPath)
-	lIP := IFNameToIPv4(cfg.GetNetworkInterfaceName())
+	cfg := &Config{}
+	common.ParseJSON(configPath, cfg)
+	lIP := common.IFNameToIPv4(cfg.GetNetworkInterfaceName())
 	lUDPAddr, err := net.ResolveUDPAddr("udp", lIP.String()+":0")
-	HandleErr(err)
+	common.HandleErr(err)
 	rAddr := cfg.GetRemoteHost() + ":" + strconv.Itoa(int(cfg.GetRemotePort()))
 	rUDPAddr, err := net.ResolveUDPAddr("udp", rAddr)
-	HandleErr(err)
+	common.HandleErr(err)
 	conn, err := net.DialUDP("udp", lUDPAddr, rUDPAddr)
-	HandleErr(err)
-	msg := make([]byte, 64)
+	common.HandleErr(err)
+	msg := make([]byte, 1024)
+	var lastMsgLen int
 	for {
 		_, err = conn.Write([]byte(cfg.GetToken()))
-		HandleErr(err)
+		common.HandleErr(err)
 		len, err := conn.Read(msg)
-		HandleErr(err)
-		os.Stdout.Write(append([]byte("\r"), msg[:len-1]...))
+		common.HandleErr(err)
+		cls := strings.Repeat(" ", lastMsgLen)
+		os.Stdout.Write(append([]byte("\r"), []byte(cls)...))
+		os.Stdout.Write(append([]byte("\r"), msg[:len]...))
 		time.Sleep(time.Second / time.Duration(cfg.GetSampleRate()))
 	}
-}
-
-// HandleErr panic none nil error
-func HandleErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-// ParseJSON parse json file into a Config structure
-func ParseJSON(cfgFilePath string) (cfg Config) {
-	cfgFile, err := os.OpenFile(cfgFilePath, os.O_RDONLY, 0644)
-	HandleErr(err)
-	defer cfgFile.Close()
-	jsd := json.NewDecoder(cfgFile)
-	cfg = Config{}
-	err = jsd.Decode(&cfg)
-	HandleErr(err)
-	return cfg
-}
-
-//IFNameToIPv4 read a network interface name and return a net.IP
-func IFNameToIPv4(ifname string) (ip net.IP) {
-	iface, err := net.InterfaceByName(ifname)
-	HandleErr(err)
-	addrs, err := iface.Addrs()
-	HandleErr(err)
-	for _, addr := range addrs {
-		ip = addr.(*net.IPNet).IP
-		if len(ip.DefaultMask()) == net.IPv4len {
-			return ip
-		}
-	}
-	HandleErr(errors.New("No IPv4 address"))
-	return nil
 }
 
 // GetRemoteHost get remote host from config
