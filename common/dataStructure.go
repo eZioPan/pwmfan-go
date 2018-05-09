@@ -92,11 +92,11 @@ func (state State) String() string {
 // State, Cycle, Temp should be updated 'in realtime'
 // Pin better not be modified after call NewFan()
 type Fan struct {
-	Pin         uint8
-	Current     TempPair
-	StateRecord StateRecord
-	Cfg         Config
-	UDPAddr     *net.UDPAddr
+	Pin     uint8
+	Current TempPair
+	Trigger Trigger
+	Cfg     Config
+	UDPAddr *net.UDPAddr
 }
 
 func (fan Fan) String() string {
@@ -106,21 +106,33 @@ func (fan Fan) String() string {
 		return sr.String()
 	*/
 	str1, _ := ValueToString(fan.Pin)
+	str1 = "Pin: " + str1
 	str2, _ := ValueToString(fan.Current.Temp)
-	str3, _ := ValueToString(fan.StateRecord.State)
+	str2 = "Temp: " + str2
+	str3, _ := ValueToString(fan.Trigger.State)
+	str3 = "State: " + str3
 	str4, _ := ValueToString(fan.Current.Cycle)
-	str5, _ := ValueToString(fan.StateRecord.Count)
-	return "Pin: " + str1 + "\tTemp: " + str2 + "\tState: " + str3 + "\tCycle: " + str4 + "\tCount: " + str5
+	str4 = "Cycle: " + str4
+	str5, _ := ValueToString(fan.Current.Count)
+	str5 = "CrCnt: " + str5
+	str6, _ := ValueToString(fan.Trigger.Count)
+	str6 = "TgCnt: " + str6
+	var lng int
+	for _, item := range []*string{&str1, &str2, &str3, &str4, &str5, &str6} {
+		lng = len(*item)
+		*item += strings.Repeat(" ", 16-lng)
+	}
+	return str1 + str2 + str3 + str4 + str5 + str6
 }
 
-// StateRecord represents a Fan's state and state's counter
-type StateRecord struct {
+// Trigger represents a Fan's state and state's counter
+type Trigger struct {
 	State State
 	Count uint32
 }
 
-func (sRec StateRecord) String() string {
-	sr, err := StructProbe(sRec, ":", "\t")
+func (tg Trigger) String() string {
+	sr, err := StructProbe(tg, ":", "\t")
 	HandleErr(err)
 	return sr.String()
 }
@@ -220,17 +232,17 @@ var indentCount int
 func (rs StructRepresent) String() (str string) {
 	lng := len(rs.Pair)
 	for i, fp := range rs.Pair {
+		str += strings.Repeat(rs.Delimeter, indentCount)
 		if i == 0 {
-			str += rs.Type.String() + "{" + rs.Delimeter
+			str += rs.Type.String() + "{" + "\n"
 			indentCount++
+			str += strings.Repeat(rs.Delimeter, indentCount)
 		}
-		str += strings.Repeat("\t", indentCount) + fp.String()
-		if i < lng-1 {
-			str += rs.Delimeter
-		}
+		str += fp.String()
+		str += "\n"
 		if i == lng-1 {
 			indentCount--
-			str += rs.Delimeter + strings.Repeat("\t", indentCount) + "}"
+			str += "}" + "\n"
 		}
 	}
 	return str
