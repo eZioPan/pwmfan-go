@@ -41,9 +41,9 @@ If count reaches **Count** settings, fan will shift into **Start** state.
 6. In **Start** state, fan will run at **Cycle** speed, then shift into **Run** state.  
 This state designs for starting fan to run properly, not too fast nor too slow.
 7. In **Run** state, fan's speed is adjust between a high **Cycle** and a low **Cycle**, with temperature as a ruler.  
-If temperature is lower than **Temp**, this program will add one into count, otherwise remove one from count.
+If temperature is lower than **Temp**, this program will add one into count, otherwise remove one from count.  
 If count reaches **Count** settings, fan will shift into **Stop** state.  
-Then fan will loop into step 5
+Then fan will loop into step 5.
 
 ## **Usage**
 Since controller program uses pwm to control fan, it only works with **root** privillage.  
