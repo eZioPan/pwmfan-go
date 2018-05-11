@@ -118,7 +118,7 @@ func (fan Fan) String() string {
 	str6, _ := ValueToString(fan.Trigger.Count)
 	str6 = "TgCnt: " + str6
 	var lng int
-	for _, item := range []*string{&str1, &str2, &str3, &str4, &str5, &str6} {
+	for _, item := range []*string{&str1, &str2, &str3, &str4, &str5} {
 		lng = len(*item)
 		*item += strings.Repeat(" ", 16-lng)
 	}
