@@ -17,15 +17,33 @@ This library still in **EARLY** development, APIs may change, use with caution.
 4. remote fan state monitor  
 
 ## **Hardware Requirement**
-1. A RaspberryPi 1/2/3 serial  
+1. A Raspberry Pi 1/2/3 serial  
 2. A fan that support PWM signal, or you can build one by add a transistor (and resistor) to you origianl fan  
 
 ### **Remember:**
-Raspberry Pi support max **+5V** for power pin, and use **+3.3V** for other gpio pin, **double check before connect anything to you pi**  
+Raspberry Pi support max **+5V** for power pin, and use **+3.3V** for other gpio pin, **double check before connect anything to you pi**.  
 
 ## **Software Requirement**
-1. (If you want to use inbox system daemon configuration,) A [Systemd controlled system](https://en.wikipedia.org/wiki/Systemd#Availability).  
-2. (If you want to build programe yourself,) A [Go SDK](https://golang.org/dl/).  
+1. Raspberry Pi runs with linux.
+2. [OPTIONAL] If you want to use inbox system daemon configuration, a [Systemd controlled system](https://en.wikipedia.org/wiki/Systemd#Availability).  
+3. [OPTIONAL] If you want to build programe yourself, a [Go SDK](https://golang.org/dl/).  
+
+## **Basic Principle**
+1. This program uses PWM signal to adjust hardware fan speed and run state.
+2. This program reads temperature data from system file, and compare with configuration file, then change fan speed and state at **SampleRate**.
+3. This program uses **ratio speed** to control fan speed, not hardware real speed.  
+Which means **FullCycle** in configuration file corresponds to the maximum capablility of fan speed.  
+And the **ratio** of **xxxCycle** divided by **FullCycle** define fan's speed.
+4. There 3 states for fan, **Stop**, **Start**, **Run**.
+5. In **Stop** state, fan will run at **StopCycle** speed, which usually be 0.  
+If temperature is higher than **Temp**, this program will add one into count, otherwise remove one from count.  
+If count reaches **Count** settings, fan will shift into **Start** state.
+6. In **Start** state, fan will run at **Cycle** speed, then shift into **Run** state.  
+This state designs for starting fan to run properly, not too fast nor too slow.
+7. In **Run** state, fan's speed is adjust between a high **Cycle** and a low **Cycle**, with temperature as a ruler.  
+If temperature is lower than **Temp**, this program will add one into count, otherwise remove one from count.
+If count reaches **Count** settings, fan will shift into **Stop** state.  
+Then fan will loop into step 5
 
 ## **Usage**
 Since controller program uses pwm to control fan, it only works with **root** privillage.  
@@ -33,16 +51,16 @@ Since controller program uses pwm to control fan, it only works with **root** pr
 You can get a very simple **installation help** when you run ./install.sh with no argument.  
 
 ### **Install Controller From Binary Release:**
-1. Download release package from [Releases](https://github.com/eZioPan/pwmfan-go/releases) to your Pi  
+1. Download release package from [Releases](https://github.com/eZioPan/pwmfan-go/releases) to your Pi.
 ```bash
 cd controller
 ```  
-2. Modify configuration file, see [Controller Configuration File](#controller-configuration-file) below  
+2. Modify configuration file, see [Controller Configuration File](#controller-configuration-file) below.
 3. Use
 ```bash
 ./install.sh install
 ```
-to install controller program to your system  
+to install controller program to your system.
 
 ### **Install Controller From Source:**
 1. On your Pi  
@@ -51,52 +69,57 @@ go get -v -u -d github.com/eZioPan/pwmfan-go
 cd $/GOPATH/src/github.com/eZioPan/pwmfan-go/cmd/controller
 ./install.sh build
 ```
-2. Modify configuration file, see [Controller Configuration File](#controller-configuration-file) below  
+2. Modify configuration file, see [Controller Configuration File](#controller-configuration-file) below.
 3. Use
 ```bash
 ./install.sh install
 ```
-to install controller program to your system  
+to install controller program to your system.
 
 ### **Controller Configuration File:**
-By default, the controller program use JSON style **"config.json"** file in the same directory of binary file, you can change it using -conifg command line parameter.  
+By default, the controller program use JSON style **"config.json"** file in the same directory of binary file, you can change it using **-conifg** command line parameter.  
 Here is an example of controller configuration file:  
 ```json
 {
 	"Pin":18,
 	"CPUTempPath":"/sys/class/thermal/thermal_zone0/temp",
-	"StartCount":5,
-	"StopCount":5,
-	"StartTemp":38,
-	"LowTemp":30,
-	"HighTemp":45,
-	"PwmFreq":600,
-	"StartCycle":50,
-	"LowCycle":50,
-	"HighCycle":100,
-	"FullCycle":100,
 	"SampleRate":2,
-	"NetworkInterfaceName":"lo",
-	"ListenPort":2334,
-	"Token":"123456789"
+	"PwmFreq":600,
+	"FullCycle":100,
+	"StopCycle":0,
+	"Start":{
+		"Temp":38,
+		"Cycle":50,
+		"Count":5
+	},
+	"Low":{
+		"Temp":30,
+		"Cycle":50,
+		"Count":5
+	},
+	"High":{
+		"Temp":45,
+		"Cycle":100,
+		"Count":0
+	},
+	"NetworkSettings":{
+		"InterfaceName":"lo",
+		"ListenPort":2334,
+		"Token":"123456789"
+	}
 }
 ```
 **Pin** defines the gpio pin number of PWM. This uses BCM Pinout number, you can check [here](https://pinout.xyz).  
 **CPUTempPath** defines the system file path to read cpu's temperature.  
-**StartCount** after counter reaches this count fan will start.  
-**StopCount** after counter reaches this count fan will stop.  
-**StartTemp** when temperature higher than this value, fan will start.  
-**LowTemp** when temperature lower than this value, fan will stop.  
-**HighTemp** when temperature higher than this value, fan will run in **HighCycle** defined speed.  
-**PwmFreq** PWM signal frequence, should be set high enough for PWM signal.  
-**StartCycle** when fan start from full stop, it needs a little higher speed to kick it start.  
-**LowCycle** is the lowest speed fan will run, before fan fully stopped.  
-**HighCycle** is the highest speed fan will run. This value shoudn't greater than **FullCycle**.  
-**FullCycle** is maximum speed which fan is able to run at.  
 **SampleRate** is the rate that program check CPU temperature and change fan speed in.  
-**NetworkInterfaceName** is the network interface which will be use to listen request and send fan data from  
-**ListenPort**  is the network port which will be use to listen request and send fan data by  
-**Token** is the token that will be check during fan data request  
+**PwmFreq** PWM signal frequence, should be set high enough for PWM signal.  
+**FullCycle** is maximum speed which fan is able to run at.  
+**StopCycle** is the speed when fan stays in **Stop** state, usually this value should be 0.  
+**Stop**,**Start**,**Run** as described in [Basic Principle](#basic-principle) earlier, is the configurations for each state.  
+**NetworkSettings** contains all network configuration for sending and receiving information.  
+**InterfaceName** is the network interface which will be use to listen request and send fan data from.  
+**ListenPort**  is the network port which will be use to listen request and send fan data by.  
+**Token** is the token that will be check during fan data request.  
 
 ### **Uninstall Controller:**
 ```bash
@@ -105,16 +128,16 @@ cd controller
 ```
 
 ### **Install Monitor From Binary Release:**
-1. Download release package from [Releases](https://github.com/eZioPan/pwmfan-go/releases)  
+1. Download release package from [Releases](https://github.com/eZioPan/pwmfan-go/releases).  
 ```bash
 cd monitor
 ```
-2. Modify configuration file, see [Monitor Configuration File](#monitor-configuration-file) below  
+2. Modify configuration file, see [Monitor Configuration File](#monitor-configuration-file) below.  
 3. Use
 ```bash
 ./monitor
 ```
-to monitor your fan state
+to monitor your fan state.
 
 ### **Install Monitor From Source:**
 1. On your Pi  
@@ -123,12 +146,12 @@ go get -v -u -d github.com/eZioPan/pwmfan-go
 cd $/GOPATH/src/github.com/eZioPan/pwmfan-go/cmd/monitor
 go build -v -ldflags "-s -w"
 ```
-2. Modify configuration file, see [Monitor Configuration File](#monitor-configuration-file) below  
+2. Modify configuration file, see [Monitor Configuration File](#monitor-configuration-file) below.  
 3. Use
 ```bash
 ./monitor
 ```
-to monitor your fan state  
+to monitor your fan state.  
 
 ### **Monitor Configuration File:**
 By default, the monitor program use JSON style **"config.json"** file in the same directory of binary file, you can change it using -conifg command line parameter.  
@@ -142,44 +165,50 @@ Here is an example of monitor configuration file:
 	"SampleRate":1
 }
 ```
-**NetworkInterface** is the network interface which will be use to send request and receive fan data from  
-**remoteHost** is IP/hostname that your controller program exist  
-**remotePort** is the port your controller program use to listen request and send data  
-**Token** is the token that will be check during fan data request  
-**SampleRate** is the rate that monitor will request fan state in  
+**NetworkInterface** is the network interface which will be use to send request and receive fan data from.  
+**remoteHost** is IP/hostname that your controller program exist.  
+**remotePort** is the port your controller program use to listen request and send data.  
+**Token** is the token that will be check during fan data request.  
+**SampleRate** is the rate that monitor will request fan state in.  
 
 ### **Uninstall Monitor:**
-Just remove binary file and configuration file
+Just remove binary file and configuration file.
 
 ### **Tips:**
 1. If you want to use fan monitor in a diffrent machine, please check your network/firewall settings.  
-pwmfan use UDP to send and receive message
+pwmfan use **UDP** to send and receive message.
 2. **Token** must be **THE SAME** both in controller configuration file and monitor configuration file.  
-As for now, token is sent in plain text, **DO NO PUT ANY SENSITIVE DATA IN THIS FIELD**
-3. As for now, fan data is sent in plain text, will change in future release
+As for now, token is sent in plain text, **DO NO PUT ANY SENSITIVE DATA IN THIS FIELD**.
+3. As for now, fan data is sent in plain text, will change in future release.
 
 ## **For Developers**
 ```bash
 go get -v -u -d github.com/eZioPan/pwmfan-go
 ```
 ```go
+import "github.com/eZioPan/pwmfan-go/common"
 import "github.com/eZioPan/pwmfan-go"
 ```
 
 ## **Dependencices**
-[stianeikeland/go-rpio](https://github.com/stianeikeland/go-rpio) for accessing RasberryPi gpio in pure go  
+[stianeikeland/go-rpio](https://github.com/stianeikeland/go-rpio) for accessing RasberryPi gpio in pure go.  
   
 ## **TODO** 
 - Write fan log to system log  
-- Redesign configuration for more clear layer style  
 - Add support for user defined fan data  
 - Linux man page for commandline  
 - send network data with encryption  
+- [Done in v0.3.0] ~~Redesign configuration for more clear layer style~~  
 - [Done in v0.2.0] ~~Network function to read fan state~~  
 - [Done in v0.2.0] ~~run as a Systemd service~~  
 - [WON'T DO] ~~Network function to change fan parameter~~(Too dangerous)  
   
-## **Changelog**  
+## **Changelog**
+- v0.3.0  
+Redesign configuration file into more clear layer style  
+Extract common code into sub directory for reusing  
+Bugs fix
+
 - v0.2.0  
 Support systemd service  
 Support remote fan monitor  
