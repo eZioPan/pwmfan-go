@@ -27,7 +27,8 @@ func Monitor(fan *common.Fan) {
 		case common.Stop:
 			if fan.Current.Temp >= fan.Cfg.Start.Temp && fan.Trigger.Count < fan.Cfg.Start.Count {
 				fan.Trigger.Count++
-			} else if fan.Current.Temp <= fan.Cfg.Start.Temp && fan.Trigger.Count > 0 {
+			}
+			if fan.Current.Temp < fan.Cfg.Start.Temp && fan.Trigger.Count > 0 {
 				fan.Trigger.Count--
 			}
 			if fan.Trigger.Count >= fan.Cfg.Start.Count {
@@ -42,7 +43,8 @@ func Monitor(fan *common.Fan) {
 		case common.Run:
 			if fan.Current.Temp <= fan.Cfg.Low.Temp && fan.Trigger.Count < fan.Cfg.Low.Count {
 				fan.Trigger.Count++
-			} else if fan.Current.Temp >= fan.Cfg.Low.Temp && fan.Trigger.Count > 0 {
+			}
+			if fan.Current.Temp > fan.Cfg.Low.Temp && fan.Trigger.Count > 0 {
 				fan.Trigger.Count--
 			}
 			if fan.Trigger.Count >= fan.Cfg.Low.Count {
