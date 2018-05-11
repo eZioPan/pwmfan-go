@@ -1,6 +1,4 @@
-//TODO: move all network relative code into a new repo
-
-package pwmfan
+package common
 
 import (
 	"errors"
@@ -9,11 +7,11 @@ import (
 
 // ResolveUDPAddr resolve the listening udp address from fan config
 func (fan *Fan) ResolveUDPAddr() {
-	cfg := fan.GetCfg()
-	ip := IFNameToIPv4(cfg.NetworkInterfaceName)
+	netCfg := fan.Cfg.NetworkSettings
+	ip := IFNameToIPv4(netCfg.InterfaceName)
 	udpAddr := &net.UDPAddr{
 		IP:   ip,
-		Port: cfg.ListenPort,
+		Port: netCfg.ListenPort,
 		Zone: "",
 	}
 	fan.SetUDPAddr(udpAddr)
@@ -56,11 +54,11 @@ func (fan *Fan) CreateServer() (udpConn *net.UDPConn) {
 // HandleRequest handle request from network
 func (fan *Fan) HandleRequest(udpConn *net.UDPConn) {
 	//use *Fan for up-to-date data
-	msg := make([]byte, 16)
+	msg := make([]byte, 1024)
 	for {
 		cnt, rAddr, err := udpConn.ReadFromUDP(msg)
 		HandleErr(err)
-		if string(msg[:cnt]) == fan.GetCfg().Token {
+		if string(msg[:cnt]) == fan.Cfg.NetworkSettings.Token {
 			udpConn.WriteToUDP([]byte(fan.String()), rAddr)
 		}
 	}
