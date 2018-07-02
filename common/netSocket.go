@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/md5"
 	"errors"
 	"net"
 )
@@ -62,4 +63,22 @@ func (fan *Fan) HandleRequest(udpConn *net.UDPConn) {
 			udpConn.WriteToUDP([]byte(fan.String()), rAddr)
 		}
 	}
+}
+
+// ChkSum check input with sum of fan's network token, return true or false, depending on compasion.
+func (fan Fan) ChkSum(input [md5.Size]byte) (ok bool) {
+	if md5.Sum([]byte(fan.Cfg.NetworkSettings.Token)) == input {
+		ok = true
+	} else {
+		ok = false
+	}
+	return ok
+}
+
+// GobCarrier is the type which will carries the values for gob encoding.
+type GobCarrier []interface{}
+
+// EncodingMessage encodings Value into gob binary stream by json-encoding message input.
+func (fan Fan) EncodingMessage(input string) (stream []byte) {
+	return nil
 }

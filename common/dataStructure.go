@@ -232,17 +232,15 @@ var indentCount int
 func (rs StructRepresent) String() (str string) {
 	lng := len(rs.Pair)
 	for i, fp := range rs.Pair {
-		str += strings.Repeat(rs.Delimeter, indentCount)
 		if i == 0 {
-			str += rs.Type.String() + "{" + "\n"
+			str += strings.Repeat(rs.Delimeter, indentCount) + rs.Type.String() + "{" + "\n"
 			indentCount++
-			str += strings.Repeat(rs.Delimeter, indentCount)
 		}
-		str += fp.String()
+		str += strings.Repeat(rs.Delimeter, indentCount) + fp.String()
 		str += "\n"
 		if i == lng-1 {
 			indentCount--
-			str += "}" + "\n"
+			str += strings.Repeat(rs.Delimeter, indentCount) + "}" + "\n"
 		}
 	}
 	return str

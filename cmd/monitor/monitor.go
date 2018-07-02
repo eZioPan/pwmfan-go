@@ -1,6 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/binary"
+	"encoding/gob"
 	"flag"
 	"net"
 	"os"
@@ -15,9 +19,10 @@ import (
 type Config struct {
 	NetworkInterface string
 	RemoteHost       string
-	RemotePort       uint
+	RemotePort       int
 	Token            string
 	SampleRate       float64
+	Message          []string
 }
 
 var (
@@ -66,12 +71,12 @@ func (cfg *Config) SetRemoteHost(remoteHost string) {
 }
 
 // GetRemotePort get remote listening port from config
-func (cfg Config) GetRemotePort() (remotePort uint) {
+func (cfg Config) GetRemotePort() (remotePort int) {
 	return cfg.RemotePort
 }
 
 // SetRemotePort set remote listening host to config
-func (cfg *Config) SetRemotePort(remotePort uint) {
+func (cfg *Config) SetRemotePort(remotePort int) {
 	cfg.RemotePort = remotePort
 }
 
@@ -104,3 +109,39 @@ func (cfg Config) GetSampleRate() (sampleRate float64) {
 func (cfg *Config) SetSampleRate(sampleRate float64) {
 	cfg.SampleRate = sampleRate
 }
+
+// GetMessage get message value
+func (cfg Config) GetMessage() (message []string) {
+	return cfg.Message
+}
+
+// SetMessage set message value
+func (cfg *Config) SetMessage(message []string) {
+	cfg.Message = message
+}
+
+// ChkSum caculate md5 ChkSum of network port and token
+func (cfg Config) ChkSum() [md5.Size]byte {
+	b := make([]byte, 0, 512)
+	binary.PutVarint(b, int64(cfg.GetRemotePort()))
+	b = append(b, []byte(cfg.GetToken())...)
+	return md5.Sum([]byte(cfg.GetToken()))
+}
+
+// EncodingMessage encoding request message
+func (cfg Config) EncodingMessage() (rawStream []byte, err error) {
+	rawStream = make([]byte, 0, 512)
+	buf := bytes.NewBuffer(rawStream)
+	ge := gob.NewEncoder(buf)
+	err = ge.Encode(cfg.ChkSum())
+	if err != nil {
+		return nil, err
+	}
+	err = ge.Encode(cfg.Message)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+

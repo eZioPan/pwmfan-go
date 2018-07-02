@@ -1,6 +1,8 @@
 package common
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -95,4 +97,42 @@ func TriangularWave(small float64, big float64, step float64, ch chan<- float64)
 			ch <- i
 		}
 	}
+}
+
+// CompressStream read raw binary stream, output gzip compressed binary stream
+func CompressStream(raw []byte) (lng int, cmp []byte, err error) {
+	cmp = make([]byte, 0, 512)
+	buf := bytes.NewBuffer(cmp)
+	gw, err := gzip.NewWriterLevel(buf, gzip.BestCompression)
+	if err != nil {
+		return 0, nil, err
+	}
+	_, err = gw.Write(raw)
+	if err != nil {
+		return 0, nil, err
+	}
+	err = gw.Close()
+	if err != nil {
+		return 0, nil, err
+	}
+	return buf.Len(), buf.Bytes(), nil
+}
+
+// DecompressStream read gzip compressed binary stream, and output uncompressed binary stream
+func DecompressStream(cmp []byte) (lng int, raw []byte, err error) {
+	raw = make([]byte, 0, 512)
+	buf := bytes.NewBuffer(cmp)
+	gr, err := gzip.NewReader(buf)
+	if err != nil {
+		return 0, nil, err
+	}
+	_, err = gr.Read(raw)
+	if err != nil {
+		return 0, nil, err
+	}
+	err = gr.Close()
+	if err != nil {
+		return 0, nil, err
+	}
+	return buf.Len(), buf.Bytes(), nil
 }
