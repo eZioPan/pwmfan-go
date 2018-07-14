@@ -34,7 +34,7 @@ function checkProgram {
 	${1} ${2} >/dev/null 2>&1
 	retcode=$?
 	shift 2
-	for arg in "$@"; do	
+	for arg in "$@"; do
 		if [ ${retcode} -eq ${arg} ]; then
 			retcode=0
 			return ${retcode}
@@ -178,6 +178,7 @@ function Install {
 	safeCopy ${CFGNAME} ${CFGDIR}/${CFGNAME} ".new" && \
 	echo -e "copying ${SERVICENAME} into ${GREEN}${PREFIX}/bin/${SERVICENAME}${CLR}" && \
 	cp ${SERVICENAME} ${PREFIX}/bin/${SERVICENAME} && \
+	chmod ug=rwx ${PREFIX}/bin/${SERVICENAME} && \
 	safeCopy systemd/${SERVICENAME}.service ${SYSTEMDUNITDIR}/${SERVICENAME}.service ".new" && \
 	echo -e "enable ${SERVICENAME} service in systemd" && \
 	systemctl daemon-reload && \
